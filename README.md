@@ -1,282 +1,376 @@
 # SynthLine
 
-**Synthetic defect-data generation for manufacturing computer vision — turn a handful of "good part" images into a large, labeled dataset of realistic defects, without needing real defective parts.**
+**Synthetic defect-data generation for manufacturing computer vision.** SynthLine turns a small set of real “good part” images into a larger, labeled dataset of realistic defects for training and evaluating inspection models.
 
-**Status:** private repo, pre-MVP — see [Roadmap](#15-roadmap).
+> **Status:** private repository, pre-MVP. The current priority is proving the synthetic-to-real transfer loop with a reproducible procedural generation pipeline.
 
----
+## Product goal
 
-## Table of contents
+Manufacturing teams need many labeled examples of defects, but real defects are often rare, expensive to collect, and difficult to annotate. SynthLine lets an integrator or manufacturer:
 
-1. [Problem](#1-problem)
-2. [Solution](#2-solution)
-3. [Target customer (ICP for MVP)](#3-target-customer-icp-for-mvp)
-4. [Why now](#4-why-now)
-5. [Competitive landscape](#5-competitive-landscape)
-6. [MVP scope](#6-mvp-scope)
-7. [System architecture](#7-system-architecture)
-8. [Data / export schema](#8-data--export-schema-illustrative)
-9. [Data strategy (cold start)](#9-data-strategy-cold-start)
-10. [Security & data privacy](#10-security--data-privacy)
-11. [Testing & validation methodology](#11-testing--validation-methodology)
-12. [Business model (early thinking)](#12-business-model-early-thinking)
-13. [Pilot / go-to-market plan](#13-pilot--go-to-market-plan)
-14. [MVP success metrics](#14-mvp-success-metrics)
-15. [Roadmap](#15-roadmap)
-16. [Key risks / open questions](#16-key-risks--open-questions)
-17. [Team / roles](#17-team--roles-placeholder--fill-in)
-18. [Repository structure](#18-repository-structure-proposed)
-19. [Getting started](#19-getting-started)
-20. [Contributing](#20-contributing)
-21. [License](#21-license)
-22. [Glossary](#22-glossary)
+1. Upload 10–50 images of a single good part.
+2. Define a small defect taxonomy, such as scratches, dents, or discoloration.
+3. Generate synthetic defect images with exact masks and bounding boxes.
+4. Preview and validate the generated dataset.
+5. Download a standard COCO-style dataset for an existing computer-vision pipeline.
 
----
+SynthLine is a **data-generation tool**, not an end-to-end inspection-model hosting product.
 
-## 1. Problem
+## MVP scope
 
-Any team trying to build a custom visual inspection model faces the same chicken-and-egg problem: supervised defect-detection models need many labeled examples of defects to train well, but defects are (thankfully) rare and inconsistent in real production. A line might run for weeks without producing a single example of a given defect type, and even when defects do occur, photographing and labeling them consistently is rarely anyone's job. Waiting to accumulate enough real defective-part photos can take months, and by the time enough exist, the product line may have already changed — a new part revision, a new supplier, a new tolerance spec — making the collected data partly obsolete.
+### In scope
 
-Manufacturers and machine-vision integrators currently have three unsatisfying options: fall back to expensive full digital-twin simulation platforms built for large enterprises with dedicated simulation teams; manually stage and photograph fake defects (slow, inconsistent, and limited to defects someone thought to simulate); or simply accept a weaker model trained on whatever thin real-world data exists and hope it generalizes.
+- One part type per project.
+- 2D images only.
+- 10–50 real good-part seed images.
+- Three to six customer-defined defect types.
+- Procedural defect generation as the first and most predictable strategy.
+- Basic lighting, texture, and background randomization.
+- Automatic segmentation masks and bounding boxes.
+- COCO-style JSON plus images and masks.
+- A preview gallery and dataset-quality report.
+- A lightweight validation harness with optional probe-model training.
+- Reproducible generation using recorded configuration and random seeds.
 
-## 2. Solution
+### Explicitly out of scope for v1
 
-A tool that takes a small number of real "good part" images (or a 3D scan/CAD file, if available) plus a defect taxonomy the customer defines (scratch, dent, discoloration, misalignment, missing component, etc.) and generates a large, labeled synthetic dataset of that part with realistic defect variations — ready to drop into a training pipeline. No digital twin required, no waiting for real defects to occur, and no dedicated simulation engineer needed on the customer's side.
+- 3D/CAD ingestion and digital-twin simulation.
+- Video or temporal defects.
+- Non-visual signals such as sound, vibration, or thermal data.
+- Multi-part projects in a single generation run.
+- Training and hosting a customer’s production inspection model.
+- Fine-grained parameter tuning beyond defect type, severity, and frequency.
 
-Core generation approaches (to prototype and compare in v1):
-- **Procedural perturbation** — programmatic texture/geometry edits (scratches, dents, discoloration) applied directly to real "good" images with randomized parameters (location, size, severity, orientation).
-- **Generative inpainting** — diffusion-based local edits that insert realistic defect regions into real images while preserving lighting, material appearance, and surrounding context.
-- **Domain randomization** — varying lighting, background, and camera angle across generated samples so downstream models generalize better to real, imperfect factory-floor conditions rather than overfitting to one clean capture setup.
+## Implementation plan
 
-Output: labeled images (with bounding boxes or segmentation masks per defect) in a format that plugs directly into standard CV training pipelines, plus a small held-out validation split generated the same way.
+The first release should be a vertical slice:
 
-## 3. Target customer (ICP for MVP)
-
-- **Primary — machine-vision integrators and consultancies.** Firms that design and deploy custom inspection systems for multiple manufacturing clients, typically 5–50 people, who hit the exact same cold-start data problem on every new client engagement. One relationship here can validate the tool across several real projects, which is faster and lower-friction than convincing one manufacturer at a time.
-- **Secondary — small-to-mid manufacturers with an in-house data/ML person** (or a part-time contractor) trying to build their own inspection model in-house rather than buying a full vendor solution, who are stuck on data rather than on modeling know-how.
-- **Tertiary — CV teams at larger inspection vendors** who want to supplement thin real-world defect datasets for edge cases (rare defect types, new product lines) rather than replace their whole data pipeline.
-
-**Buyer persona:** typically an engineering lead or ML/data engineer, not a plant manager — this is a technical-buyer sale, not an ops/floor sale, which changes the pitch: lead with model accuracy and time-to-usable-dataset, not with "reduce defects on your line" messaging.
-
-## 4. Why now
-
-- Synthetic data tooling for industrial visual inspection is called out as a genuine, underfilled gap: large-enterprise tools like NVIDIA Omniverse solve this with full digital twins, but smaller manufacturers and integrators need something far simpler that doesn't require building a 3D simulation of the whole line.
-- The broader trend in visual QC is toward needing fewer labeled samples and faster deployment — synthetic data generation is a direct answer to that trend rather than a side feature bolted onto an inspection product.
-- Generative image models (diffusion-based inpainting/editing) have gotten good enough at small, localized, realistic edits that this is newly practical for a small team to build well, rather than requiring a large research group or a custom-rendered 3D pipeline.
-- Machine vision adoption in manufacturing is accelerating broadly (market roughly doubling by 2030, with most manufacturers planning AI-based visual inspection deployments soon) — every one of those new deployments hits the same data cold-start problem this product solves.
-
-## 5. Competitive landscape
-
-- **Full digital-twin / simulation platforms** (e.g., NVIDIA Omniverse-based workflows): powerful, photorealistic, but require 3D asset creation and simulation expertise most small teams don't have in-house. We compete by being usable from 2D photos alone, with no simulation background required.
-- **End-to-end inspection vendors** (Landing AI, Elementary, Covision Quality, Instrumental, and similar): sell a full inspection product including the model and deployment, not just the training data. We are not competing with them directly — we could plausibly become a data supplier *to* smaller vendors or integrators building something similar, rather than a rival to the big platforms.
-- **Manual data augmentation libraries** (standard CV augmentation tooling — flips, rotations, color jitter): widely used but only vary existing images, they don't synthesize entirely new defect instances. We're solving a different, harder problem: generating defects that don't exist yet in the seed set at all.
-- **Our wedge:** nobody targeting the *small manufacturer / integrator* segment specifically with a "no 3D, no simulation team, no real defect data required" product. That's the gap this MVP is built to test.
-
-## 6. MVP scope
-
-**In scope (v1):**
-- Single part type per project, 2D images only (no 3D/CAD ingestion yet).
-- A small defect taxonomy per project (3–6 defect types defined by the customer, e.g., scratch / dent / discoloration).
-- Upload a handful (10–50) of real "good part" images as the seed set.
-- Generate a labeled synthetic dataset (target: hundreds to low thousands of images) with bounding-box or mask labels per defect instance.
-- Export in a standard format (e.g., COCO-style JSON + images) that plugs into common training pipelines.
-- A simple web UI: upload seed images → define defect types (with reference examples or text description) → generate → preview → download.
-- A basic internal validation harness (see §11) that reports estimated dataset quality before the customer even downloads it.
-
-**Explicitly out of scope for v1:**
-- 3D/CAD-based synthesis or full digital-twin simulation.
-- Training or hosting the downstream inspection model ourselves — v1 is a data tool, not an end-to-end inspection product.
-- Multi-part-type projects in a single run.
-- Fine-grained control over generation parameters beyond defect type and rough severity/frequency — keep the interface simple for v1.
-- Video/temporal defects (e.g., intermittent mechanical faults visible only over time) — static image defects only.
-- Non-visual defect signals (sound, vibration, thermal) — camera-visible defects only.
-
-## 7. System architecture
-
-```
-                         ┌─────────────────────┐
- [Seed "good part"       │   Ingestion Service   │
-  images, 10–50] ───────▶│  (validate, store,     │
-                         │   basic QA checks)     │
-                         └──────────┬───────────┘
-                                    ▼
- [Defect taxonomy,        ┌─────────────────────┐
-  reference examples] ───▶│  Generation Engine    │
-                         │  - procedural           │
-                         │  - generative inpaint   │
-                         │  - domain randomization │
-                         └──────────┬───────────┘
-                                    ▼
-                         ┌─────────────────────┐
-                         │  Labeling / Export      │
-                         │  (auto-generated boxes/ │
-                         │   masks + metadata)     │
-                         └──────────┬───────────┘
-                                    ▼
-                         ┌─────────────────────┐
-                         │  Validation Harness     │──▶ Quality report to customer
-                         │  (train small probe      │    (est. accuracy signal)
-                         │   model, test vs. real   │
-                         │   benchmark defects)     │
-                         └─────────────────────┘
+```text
+Seed images
+    → ingestion and QA
+    → procedural defect synthesis
+    → masks and bounding boxes
+    → COCO export
+    → visual preview and statistics
+    → optional probe-model validation
 ```
 
-**Components:**
-- **Ingestion service** — accepts uploaded images, runs basic sanity checks (resolution, lighting consistency, part visibility), and flags seed sets that are too inconsistent to generate good synthetic data from before the customer wastes a generation run on bad input.
-- **Generation engine** — the core IP. Houses the three generation approaches (§2) as swappable strategies; v1 ships with procedural perturbation as the default (fastest, most predictable), generative inpainting as an opt-in for defect types that need more visual realism.
-- **Labeling/export** — since defects are synthetically inserted, we know exactly where they are — labels are generated automatically alongside the images rather than requiring a separate annotation step, which is a meaningful speed advantage over any workflow that starts from real photos needing manual labeling.
-- **Validation harness** — trains a small internal probe model on a sample of the generated data and reports an estimated quality signal before the customer downloads anything. This is as much a product-trust feature as an engineering one (see §11).
+The initial implementation should be local-first. A Python library and CLI will make the generation pipeline testable and useful before a browser UI or hosted job system is introduced.
 
-## 8. Data / export schema (illustrative)
+### Recommended stack
+
+- **Python 3.11+** for the generation and validation pipeline.
+- **OpenCV, NumPy, Pillow, and scikit-image** for image processing.
+- **Albumentations** for augmentations and domain randomization.
+- **Pydantic** for project and generation configuration.
+- **FastAPI** for the API once the core pipeline is stable.
+- **Gradio or Streamlit** for the first UI prototype; a separate React/Next.js UI can follow.
+- **SQLite and local filesystem** for the initial metadata and artifact store.
+- A Redis-backed worker system only when generation jobs need to run asynchronously at scale.
+
+Do not introduce microservices, Kubernetes, or cloud-specific infrastructure until the generation and evaluation loop demonstrates value.
+
+## Generation strategies
+
+The generation engine should expose a common strategy interface so techniques can be compared without changing ingestion, labeling, export, or validation.
+
+### Procedural perturbation — first implementation
+
+Procedural generation is the v1 default because it is fast, deterministic, explainable, and produces labels by construction.
+
+Initial defect types:
+
+- **Scratch:** curved or jagged variable-width paths blended into the source image.
+- **Discoloration/stain:** irregular blurred regions with localized hue, saturation, or brightness changes.
+- **Dent:** a shaded irregular or elliptical region with a brightened rim; initially experimental because realistic dents depend heavily on lighting.
+
+Every generator should return the modified image, one or more masks, defect parameters, severity, and the random seed used.
+
+### Future strategies
+
+- Diffusion-based local inpainting.
+- More advanced lighting-aware geometry and texture simulation.
+- Customer-specific generation strategies selected from validation results.
+
+Generative inpainting should be added only after procedural generation establishes a measurable baseline.
+
+## System architecture
+
+```text
+                         ┌────────────────────┐
+  Good-part images ─────▶│ Ingestion and QA    │
+  Defect configuration ─▶│ Project management  │
+                         └─────────┬──────────┘
+                                   ▼
+                         ┌────────────────────┐
+                         │ Generation engine  │
+                         │ procedural first   │
+                         │ randomization      │
+                         │ inpainting later   │
+                         └─────────┬──────────┘
+                                   ▼
+                         ┌────────────────────┐
+                         │ Labeling and export │
+                         │ masks, boxes, COCO  │
+                         └─────────┬──────────┘
+                                   ▼
+                         ┌────────────────────┐
+                         │ Validation harness  │
+                         │ reports and preview │
+                         └────────────────────┘
+```
+
+### Proposed repository structure
+
+```text
+synthline/
+├── pyproject.toml
+├── README.md
+├── src/
+│   └── synthline/
+│       ├── ingestion/          # image loading, validation, and QA
+│       ├── generation/
+│       │   ├── procedural/     # scratch, dent, discoloration generators
+│       │   ├── inpainting/     # future diffusion-based edits
+│       │   └── randomization/  # lighting, texture, and transforms
+│       ├── labeling/           # masks, boxes, and COCO export
+│       ├── validation/         # statistics, previews, and probe models
+│       ├── projects/           # configuration and artifact storage
+│       └── cli.py
+├── api/                        # FastAPI application, after the core pipeline
+├── web/                        # browser UI
+├── tests/                      # unit, integration, and fixture tests
+├── benchmarks/                 # public dataset fixtures and evaluations
+├── docs/
+└── scripts/
+```
+
+## Data model and reproducibility
+
+A generation must preserve the configuration that produced it. At minimum, record:
+
+- project and part type;
+- source seed image for every generated image;
+- defect type, severity, and parameters;
+- generation method;
+- random seed;
+- image dimensions and artifact paths;
+- dataset split.
+
+Example metadata:
 
 ```json
 {
   "image": "part_0001_scratch.png",
+  "source_seed": "seed_004.png",
   "part_type": "bracket_v3",
+  "generation_method": "procedural_perturbation",
+  "random_seed": 884321,
   "defects": [
     {
       "type": "scratch",
+      "severity": "moderate",
       "bbox": [124, 88, 212, 101],
-      "mask": "part_0001_scratch_mask.png",
-      "severity": "moderate"
+      "mask": "masks/part_0001_scratch_mask.png"
     }
-  ],
-  "source": "synthetic",
-  "generation_method": "procedural_perturbation"
+  ]
 }
 ```
 
-- Exports ship as COCO-style JSON plus an image/mask folder by default, since that's the format most CV training pipelines already expect — a customer's existing training code should need minimal changes to consume our output.
-- Every synthetic image is tagged with its generation method and defect metadata, so customers (and we, internally) can later analyze which generation technique produces the most useful training data per defect type.
+Generated images should be reproducible from the project configuration and seed. This is essential for debugging, benchmark comparisons, and customer support.
 
-## 9. Data strategy (cold start)
+## Ingestion and seed-set QA
 
-This concept is specifically designed to not need our own proprietary dataset:
+The ingestion layer should check and report:
 
-1. Internal development and testing use public industrial datasets (e.g., MVTec AD and similar anomaly-detection benchmarks) purely to validate that models trained on our synthetic output perform reasonably against real defect examples.
-2. Each customer brings their own seed images (their real "good parts") — we never need to acquire or own a manufacturing dataset ourselves.
-3. Design partners (2–3 manufacturers or integrators) get early access in exchange for feedback on how well the generated data performs when they actually train their own models on it — this is our real-world validation loop, not a data acquisition play.
-4. Over time, with explicit customer consent, anonymized performance signal (not the images themselves) — e.g., "procedural perturbation worked well for scratch defects on metal parts" — can become an internal knowledge base that improves generation quality across customers without ever pooling anyone's actual images.
+- unsupported or corrupted files;
+- image dimensions and color modes;
+- extreme brightness, darkness, or blur;
+- duplicate and near-duplicate images;
+- inconsistent framing or orientation;
+- whether the part can be localized reasonably.
 
-## 10. Security & data privacy
+Warnings should not block early experimentation unless an image is unusable. A QA report might identify inconsistent lighting or dimensions while still allowing the user to generate a dataset.
 
-- Customer part images are frequently sensitive (unreleased product designs, proprietary tooling) — this needs to be treated as seriously as any B2B SaaS handling confidential IP from day one, not bolted on later.
-- v1 commitments to design partners: images are used only to generate that customer's dataset, are not used to train any shared/cross-customer model without explicit opt-in, and are deletable on request.
-- Longer-term (post-MVP): customer-specific storage isolation, audit logging of who accessed what, and a clear data retention policy are likely required before larger manufacturers will engage — worth flagging early even though it's not a v1 build item, since it affects how we structure storage from the start.
+For the first prototype, assume the customer supplies consistently framed or cropped images. Automatic part segmentation can be added once the core generation loop is validated.
 
-## 11. Testing & validation methodology
+## Labels and export
 
-The core technical risk (sim-to-real gap) needs a real measurement, not just an assumption that generated data "looks right":
+Masks should be generated internally for every defect because they are the source of truth. Bounding boxes can then be derived from masks. The default export should contain:
 
-1. **Benchmark validation (pre-launch):** train small models on synthetic data generated from public benchmark "good" images, then test against the same benchmark's real defect examples. This gives an internal, repeatable accuracy signal before any customer is involved.
-2. **Per-generation quality report:** every generated dataset ships with a lightweight internal report (via the validation harness in §7) — not a guarantee of real-world performance, but an early signal so customers aren't flying blind.
-3. **Pilot-partner ground truth:** the real test is whether a model trained substantially on our synthetic data catches real defects when deployed by a design partner — this is the metric that actually matters and the one used for the go/no-go decision on continuing past MVP.
-4. **Per-defect-type tracking:** track validation results separately per defect type (scratch vs. dent vs. discoloration, etc.) rather than as one aggregate number — some defect types will transfer far better than others, and knowing which is more useful than a single blended accuracy figure.
-
-## 12. Business model (early thinking)
-
-- **Pricing shape:** usage-based or per-project, not per-seat — customers use this in bursts (per new part type or product line), not continuously, so a flat monthly seat license is likely a mismatch for v1. A "per generated dataset" or tiered monthly credit model is worth testing with pilot partners.
-- **Free pilot → paid conversion:** first dataset generation free (or heavily discounted) per design partner, converting to paid once they've validated it against their own model.
-- **Integrator channel potential:** if machine-vision integrators become the primary customer, a channel/reseller motion (they use it across their own client projects) could scale faster than direct-to-manufacturer sales — worth testing which motion pilot partners actually prefer.
-- Pricing specifics are explicitly not locked in for MVP — the pilot phase is partly about learning what customers are actually willing to pay for and how they'd rather be billed.
-
-## 13. Pilot / go-to-market plan
-
-- Identify 5–10 candidate machine-vision integrators and consultancies (smaller firms are more accessible and iterate faster than large ones).
-- Offer a free pilot: generate a dataset for one of their live customer projects, and compare a model trained on it against their current approach or timeline.
-- Success criteria for converting a pilot to paid: a model trained substantially on our synthetic data reaches usable accuracy meaningfully faster than their current data-collection timeline, on at least one real defect type.
-- In parallel, run 1–2 pilots directly with manufacturers who have an in-house ML person, to validate both customer segments rather than assuming the integrator channel is the only viable path.
-
-## 14. MVP success metrics
-
-- **Technical:** a model trained on generated data reaches meaningfully-above-baseline detection accuracy on real defect examples for at least the 2–3 simplest defect types (scratch, discoloration) in the taxonomy.
-- **Business:** at least 1 of 2–3 pilot partners uses generated data in a real model they deploy or seriously evaluate within 60 days.
-- **Product:** seed-images-to-downloadable-dataset in under an hour for a first-time user, with no manual scripting required.
-- **Trust/adoption signal:** at least one pilot partner is willing to be referenced or used as a case study — a proxy for whether the product delivered real, defensible value rather than just a technically interesting demo.
-
-## 15. Roadmap
-
-- **Phase 0 (weeks 1–4):** build and validate the generation pipeline against public benchmarks; confirm the sim-to-real gap is small enough to be useful before doing any customer outreach.
-- **Phase 1 (weeks 5–10):** run 2–3 free pilots with integrators or manufacturers on real (but non-critical) inspection projects; instrument how well their models perform on our generated data.
-- **Phase 2 (weeks 11–16):** convert pilots to paid; tighten the UI, export formats, and pricing model based on what actually blocked pilot users.
-- **Phase 3 (post-MVP, not in scope now):** 3D/CAD ingestion for richer geometry-aware defects, multi-part-type projects, and a hosted "train the model for you" option as a natural upsell once the core data-generation quality is proven.
-
-_(Timeframes are rough planning targets, not commitments — the real pacing depends on how fast the validation loop in §11 converges.)_
-
-## 16. Key risks / open questions
-
-- **Sim-to-real gap is the central risk:** if models trained on our synthetic data don't transfer to real production defects, the product has no value regardless of how good the images look to a human. This needs to be validated against real defect data as early as possible, not assumed.
-- **Defect taxonomy limits:** some defect types (subtle dimensional deviations, complex multi-part assembly errors) may be much harder to synthesize convincingly than surface-level scratches or discoloration — v1 should lean into the defect types that are genuinely tractable rather than promising full generality.
-- **Customer trust in synthetic data:** some manufacturers may be skeptical of training a QC model on generated rather than real defect images — the pilot's job is as much about building that trust with evidence as it is about the technology itself.
-- **IP/confidentiality sensitivity:** part images can reveal proprietary product details, which may slow down design-partner recruitment more than expected — worth planning for NDAs as a normal part of pilot outreach, not an edge case.
-- **Defensibility:** generation techniques themselves are not unique long-term; the moat has to come from generation quality per defect type, ease of use, and (eventually) an accumulated understanding of which techniques transfer well to which industries — worth being honest with the team about this from day one.
-
-## 17. Team / roles (placeholder — fill in)
-
-- Generative/CV modeling: _TBD_
-- Pipeline/infra (generation + export): _TBD_
-- Product/UI: _TBD_
-- Pilot outreach & validation: _TBD_
-
-## 18. Repository structure (proposed)
-
-```
-synthline/
-├── ingestion/          # upload handling, seed-set QA checks
-├── generation/          
-│   ├── procedural/      # perturbation-based defect synthesis
-│   ├── inpainting/       # diffusion-based generative edits
-│   └── randomization/    # lighting/background/angle variation
-├── labeling/            # auto-label generation, export formatting
-├── validation/           # probe-model training + benchmark scoring
-├── web/                  # upload → configure → generate → download UI
-├── benchmarks/            # public dataset fixtures for internal testing
-└── docs/
+```text
+export/
+├── images/
+├── masks/
+├── annotations.json       # COCO-style JSON
+├── metadata.jsonl         # per-image generation metadata
+└── report.html or report.json
 ```
 
-## 19. Getting started
+COCO annotations should include image IDs, category IDs, bounding boxes, areas, and segmentation data. Customers should be able to request either bounding-box-only output or images with segmentation masks.
 
-### Prerequisites (placeholder — confirm once stack is chosen)
+### Avoiding split leakage
 
-- Git access to this repo (private — request access from a team admin).
-- Language/runtime and package manager TBD (recommend prototyping in Python for the generation pipeline given the ML/CV library ecosystem; UI stack TBD separately).
-- No external API keys or credentials required to run the core generation pipeline locally in v1 — flag here if that changes.
+Do not randomly split generated images when variants derived from the same source seed appear in both training and validation. Prefer splitting the original seed images first, then generating each dataset split from its own seed subset. If too few seeds are available, record the relationship and label the validation result as an estimate.
 
-### Setup
+## Validation methodology
+
+The central product risk is the sim-to-real gap. Visual plausibility alone is not evidence that generated data will improve a real inspection model.
+
+### Automated dataset checks
+
+- Empty or nearly empty masks.
+- Invalid boxes and segmentation geometry.
+- Defect area and severity distributions.
+- Class balance and generation failure rate.
+- Brightness, contrast, and texture distributions.
+- Duplicate or near-duplicate outputs.
+
+### Visual checks
+
+Generate contact sheets showing:
+
+- original/generated pairs;
+- mask overlays;
+- examples grouped by defect type and severity;
+- smallest and largest generated defects.
+
+### Probe-model checks
+
+Where real defect examples are available, train a small fixed baseline model on generated data and evaluate it on held-out real images. Report precision, recall, and F1 separately for each defect type. Clearly distinguish dataset-health checks from evidence of transfer to real defects.
+
+Public industrial datasets such as MVTec AD can be used for internal benchmarks. Customer images should remain customer-controlled and should not be used to train shared models without explicit consent.
+
+## Initial CLI target
+
+The first end-to-end prototype should support a command like:
 
 ```bash
-# clone repo
-git clone https://github.com/ThriveCodes/synthline.git
-cd synthline
-
-# generation pipeline
-# ...
-
-# web UI
-# ...
-
-# benchmark/validation scripts
-# ...
+synthline generate \
+  --seeds ./data/good \
+  --defect scratch \
+  --count 500 \
+  --output ./runs/bracket-scratch \
+  --seed 12345
 ```
 
-_(Fill in once the initial stack is chosen — recommend prototyping the procedural-perturbation approach first since it's the fastest to get working end-to-end, then layering in generative inpainting for defect types that need more realism.)_
+The command should produce images, masks, COCO annotations, metadata, a preview contact sheet, and a basic quality report.
 
-## 20. Contributing
+## API and UI workflow
 
-Early-stage, small-team repo — process is intentionally lightweight for now:
+After the CLI works, expose the same library through a small API:
 
-- Branch off `main`, open a PR for review before merging rather than pushing directly, even at this stage — it keeps everyone aware of what's changing in a fast-moving MVP.
-- Keep PRs scoped to one component (generation engine, ingestion, UI, validation) where possible so reviews stay fast.
-- Update the relevant section of this README in the same PR when a design decision in here (architecture, scope, data schema) changes — this doc is meant to stay a living source of truth, not a one-time artifact.
-- No formal issue-tracker process defined yet — add one here once the team settles on a tool.
+```text
+POST   /projects
+POST   /projects/{id}/seeds
+POST   /projects/{id}/defects
+POST   /projects/{id}/generations
+GET    /generations/{id}
+GET    /generations/{id}/preview
+GET    /generations/{id}/report
+GET    /generations/{id}/download
+DELETE /projects/{id}
+```
 
-## 21. License
+The first UI should follow a simple flow:
 
-Private and confidential. All rights reserved — not licensed for external use, distribution, or reproduction at this stage. Update this section if/when a license decision is made for any part of the codebase.
+```text
+Create project → upload seeds → define defects → generate → preview → download
+```
 
-## 22. Glossary
+Long-running generation should initially use a simple background task. Add Redis and a dedicated worker only when job duration or concurrent users require it.
 
-- **Anomaly detection:** a modeling approach that learns what "normal" looks like and flags deviations, as opposed to classifying specific known defect categories.
-- **Domain randomization:** varying non-essential visual factors (lighting, background, angle) during synthetic data generation so a model trained on it generalizes better to real-world conditions.
-- **Sim-to-real gap:** the performance drop (if any) a model experiences when trained on synthetic data and tested on real-world data — the central risk this product needs to keep measured and small.
-- **Seed set:** the small number of real "good part" images a customer provides as the starting point for synthetic generation.
+## Development phases
+
+### Phase 0 — technical spike
+
+- Establish the Python package and test setup.
+- Implement image loading and basic QA.
+- Implement procedural scratches.
+- Generate masks and bounding boxes.
+- Export COCO annotations.
+- Create previews and dataset statistics.
+
+### Phase 1 — procedural MVP
+
+- Add discoloration and experimental dents.
+- Add severity and frequency controls.
+- Record reproducible configurations and seeds.
+- Implement seed-aware train/validation/test splits.
+- Add unit and integration tests.
+
+### Phase 2 — browser workflow
+
+- Add project creation and image upload.
+- Add defect configuration.
+- Show progress and generated previews.
+- Add downloadable ZIP exports and reports.
+
+### Phase 3 — pilot readiness
+
+- Add public benchmark fixtures.
+- Add probe-model training and per-defect metrics.
+- Add deletion, retention, and access controls.
+- Test with two or three design partners.
+
+### Phase 4 — post-MVP
+
+- Diffusion-based inpainting.
+- 3D/CAD ingestion.
+- Multi-part projects.
+- Hosted downstream model training.
+
+## Security and privacy
+
+Customer images may contain confidential product designs. The MVP should commit to:
+
+- using images only for the customer’s requested generation;
+- not training shared models on customer images without explicit opt-in;
+- allowing project and artifact deletion;
+- keeping customer artifacts isolated by project;
+- documenting retention behavior before pilots begin.
+
+Audit logging, stronger tenant isolation, and configurable retention should be added before onboarding larger manufacturers.
+
+## Success metrics
+
+- A first-time user can go from seed images to a downloadable dataset in under one hour.
+- Generated datasets contain valid, correctly aligned labels with a low generation failure rate.
+- Synthetic-trained models perform meaningfully above baseline on real defects for at least two simple defect types.
+- At least one pilot partner evaluates or deploys a model trained substantially on SynthLine data within 60 days.
+
+The most important metric is not how realistic an image looks in isolation; it is whether generated data helps detect real production defects.
+
+## Getting started
+
+The runtime and package setup are being established during Phase 0. The recommended starting environment is Python 3.11+ with a virtual environment and a `pyproject.toml`-managed package.
+
+Once the initial pipeline is in place:
+
+```bash
+git clone https://github.com/ThriveCodes/synthline.git
+cd synthline
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+pytest
+```
+
+No external API keys should be required for the procedural generation pipeline. Any future hosted or diffusion-based provider must document its credentials and data-handling implications.
+
+## Contributing
+
+This is an early-stage private repository. Keep changes focused on one component and add or update tests with implementation changes. Update this README when a design decision changes the architecture, scope, schema, or validation methodology.
+
+Prefer branching and pull requests for normal development. Experimental generation changes should include example outputs and the configuration used to produce them.
+
+## License
+
+Private and confidential. All rights reserved. This project is not currently licensed for external use, distribution, or reproduction.
+
+## Glossary
+
+- **Anomaly detection:** learning normal appearance and flagging deviations rather than classifying known defect categories.
+- **Domain randomization:** varying non-essential visual factors such as lighting, background, and angle to improve generalization.
+- **Seed set:** the small collection of real good-part images used as the source for generation.
+- **Sim-to-real gap:** the performance difference between training or evaluating with synthetic data and performance on real production images.
