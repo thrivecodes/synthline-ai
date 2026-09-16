@@ -1,6 +1,35 @@
-# SynthLine (working name)
+# SynthLine
 
 **Synthetic defect-data generation for manufacturing computer vision — turn a handful of "good part" images into a large, labeled dataset of realistic defects, without needing real defective parts.**
+
+**Status:** private repo, pre-MVP — see [Roadmap](#15-roadmap).
+
+---
+
+## Table of contents
+
+1. [Problem](#1-problem)
+2. [Solution](#2-solution)
+3. [Target customer (ICP for MVP)](#3-target-customer-icp-for-mvp)
+4. [Why now](#4-why-now)
+5. [Competitive landscape](#5-competitive-landscape)
+6. [MVP scope](#6-mvp-scope)
+7. [System architecture](#7-system-architecture)
+8. [Data / export schema](#8-data--export-schema-illustrative)
+9. [Data strategy (cold start)](#9-data-strategy-cold-start)
+10. [Security & data privacy](#10-security--data-privacy)
+11. [Testing & validation methodology](#11-testing--validation-methodology)
+12. [Business model (early thinking)](#12-business-model-early-thinking)
+13. [Pilot / go-to-market plan](#13-pilot--go-to-market-plan)
+14. [MVP success metrics](#14-mvp-success-metrics)
+15. [Roadmap](#15-roadmap)
+16. [Key risks / open questions](#16-key-risks--open-questions)
+17. [Team / roles](#17-team--roles-placeholder--fill-in)
+18. [Repository structure](#18-repository-structure-proposed)
+19. [Getting started](#19-getting-started)
+20. [Contributing](#20-contributing)
+21. [License](#21-license)
+22. [Glossary](#22-glossary)
 
 ---
 
@@ -205,11 +234,19 @@ synthline/
 └── docs/
 ```
 
-## 19. Getting started (dev environment — placeholder)
+## 19. Getting started
+
+### Prerequisites (placeholder — confirm once stack is chosen)
+
+- Git access to this repo (private — request access from a team admin).
+- Language/runtime and package manager TBD (recommend prototyping in Python for the generation pipeline given the ML/CV library ecosystem; UI stack TBD separately).
+- No external API keys or credentials required to run the core generation pipeline locally in v1 — flag here if that changes.
+
+### Setup
 
 ```bash
 # clone repo
-git clone <repo-url>
+git clone https://github.com/ThriveCodes/synthline.git
 cd synthline
 
 # generation pipeline
@@ -224,7 +261,20 @@ cd synthline
 
 _(Fill in once the initial stack is chosen — recommend prototyping the procedural-perturbation approach first since it's the fastest to get working end-to-end, then layering in generative inpainting for defect types that need more realism.)_
 
-## 20. Glossary
+## 20. Contributing
+
+Early-stage, small-team repo — process is intentionally lightweight for now:
+
+- Branch off `main`, open a PR for review before merging rather than pushing directly, even at this stage — it keeps everyone aware of what's changing in a fast-moving MVP.
+- Keep PRs scoped to one component (generation engine, ingestion, UI, validation) where possible so reviews stay fast.
+- Update the relevant section of this README in the same PR when a design decision in here (architecture, scope, data schema) changes — this doc is meant to stay a living source of truth, not a one-time artifact.
+- No formal issue-tracker process defined yet — add one here once the team settles on a tool.
+
+## 21. License
+
+Private and confidential. All rights reserved — not licensed for external use, distribution, or reproduction at this stage. Update this section if/when a license decision is made for any part of the codebase.
+
+## 22. Glossary
 
 - **Anomaly detection:** a modeling approach that learns what "normal" looks like and flags deviations, as opposed to classifying specific known defect categories.
 - **Domain randomization:** varying non-essential visual factors (lighting, background, angle) during synthetic data generation so a model trained on it generalizes better to real-world conditions.
