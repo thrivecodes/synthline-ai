@@ -437,9 +437,6 @@ def compare_synthetic_vs_real_baselines(
         "test_samples": len(real_test_y),
         "f1_lift": float(f1_lift),
         "accuracy_lift": float(acc_lift),
-        "synthetic_standalone_relative_f1": float(
-            synthetic_only["f1"] / (real_only["f1"] + 1e-6)
-        ),
+        "synthetic_standalone_relative_f1": float(synthetic_only["f1"] / (real_only["f1"] + 1e-6)),
         "is_beneficial": bool(f1_lift >= 0 and acc_lift >= 0),
     }
-

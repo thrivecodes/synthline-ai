@@ -191,4 +191,3 @@ def test_cli_benchmark_execution(tmp_path: Path) -> None:
     )
     assert result.exit_code == 0
     assert (bench_dir / "benchmark_report.json").exists()
-

@@ -220,9 +220,7 @@ def export_yolo(
                         class_id = class_map[inst_type]
                         f_lbl.write(f"{class_id} {x_c:.6f} {y_c:.6f} {norm_w:.6f} {norm_h:.6f}\n")
             else:
-                x_c, y_c, norm_w, norm_h = mask_to_yolo_bbox(
-                    res.mask, img_width=w, img_height=h
-                )
+                x_c, y_c, norm_w, norm_h = mask_to_yolo_bbox(res.mask, img_width=w, img_height=h)
                 if norm_w > 0 and norm_h > 0 and def_type in class_map:
                     class_id = class_map[def_type]
                     f_lbl.write(f"{class_id} {x_c:.6f} {y_c:.6f} {norm_w:.6f} {norm_h:.6f}\n")

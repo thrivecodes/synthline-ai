@@ -124,9 +124,7 @@ def run_benchmark_suite(
     syn_imgs = [
         r.image for r in all_synthetic_results if r.image is not None and r.mask is not None
     ]
-    syn_msks = [
-        r.mask for r in all_synthetic_results if r.image is not None and r.mask is not None
-    ]
+    syn_msks = [r.mask for r in all_synthetic_results if r.image is not None and r.mask is not None]
     syn_lbls = [1 if (m > 0).any() else 0 for m in syn_msks]
 
     baseline_comparison: dict[str, Any] = {}

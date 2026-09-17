@@ -119,12 +119,14 @@ class DentGenerator(BaseGenerator):
             # Update binary mask
             mask[y0:y1, x0:x1][dent_mask_local] = 255
 
-            dents_info.append({
-                "center": (cx, cy),
-                "rx": float(rx),
-                "ry": float(ry),
-                "light_angle": float(light_angle),
-            })
+            dents_info.append(
+                {
+                    "center": (cx, cy),
+                    "rx": float(rx),
+                    "ry": float(ry),
+                    "light_angle": float(light_angle),
+                }
+            )
 
         # Final cleanup: ensure clean binary mask
         mask = (mask > 0).astype(np.uint8) * 255
