@@ -14,6 +14,8 @@ class DefectType(StrEnum):
     SCRATCH = "scratch"
     STAIN = "stain"
     DISCOLORATION = "discoloration"
+    CRACK = "crack"
+    PINHOLE = "pinhole"
 
 
 class DatasetSplit(StrEnum):
@@ -57,6 +59,7 @@ class GenerationConfig(BaseModel):
     lighting_intensity: float = Field(default=0.0, ge=0.0, le=1.0)
     texture_intensity: float = Field(default=0.0, ge=0.0, le=1.0)
     geometry_intensity: float = Field(default=0.0, ge=0.0, le=1.0)
+    sensor_intensity: float = Field(default=0.0, ge=0.0, le=1.0)
 
 
 class ImageInfo(BaseModel):

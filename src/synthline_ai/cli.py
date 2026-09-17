@@ -50,7 +50,10 @@ console = Console()
 @app.command()
 def generate(
     seeds: Path = typer.Option(..., help="Directory of seed images"),
-    defect: str = typer.Option("scratch", help="Defect type (scratch, stain, discoloration)"),
+    defect: str = typer.Option(
+        "scratch",
+        help="Defect type (scratch, stain, discoloration, crack, pinhole)",
+    ),
     count: int = typer.Option(100, min=1, max=10000, help="Number of images to generate"),
     output: Path = typer.Option(..., help="Output directory"),
     seed: int = typer.Option(42, help="Random seed for reproducibility"),
@@ -65,6 +68,7 @@ def generate(
     lighting: float = typer.Option(0.2, min=0.0, max=1.0, help="Lighting variation intensity"),
     texture: float = typer.Option(0.15, min=0.0, max=1.0, help="Texture variation intensity"),
     geometry: float = typer.Option(0.5, min=0.0, max=1.0, help="Geometric affine jitter intensity"),
+    sensor: float = typer.Option(0.1, min=0.0, max=1.0, help="Sensor noise intensity"),
 ) -> None:
     """Generate synthetic defect images from seed images."""
     start_time = time.time()
@@ -104,6 +108,7 @@ def generate(
         lighting_intensity=lighting if variations else 0.0,
         texture_intensity=texture if variations else 0.0,
         geometry_intensity=geometry if variations else 0.0,
+        sensor_intensity=sensor if variations else 0.0,
     )
 
     # Step 1: Load seeds

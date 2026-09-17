@@ -218,7 +218,7 @@
     /* Defect selection cards */
     .defect-cards {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
       gap: 1rem;
       margin-bottom: 1.25rem;
     }
@@ -729,6 +729,14 @@
               <div class="defect-card" onclick="selectDefectCard('discoloration')" id="card-discoloration">
                 <h4>&#x1F308; Discoloration</h4>
                 <p>Thermal gradients, oxidation, chemical tinting, and uneven surface discoloration patches.</p>
+              </div>
+              <div class="defect-card" onclick="selectDefectCard('crack')" id="card-crack">
+                <h4>&#x1FA98; Crack</h4>
+                <p>Tortuous stress fractures, dendritic branching fissures with hairline width and dark shadow core.</p>
+              </div>
+              <div class="defect-card" onclick="selectDefectCard('pinhole')" id="card-pinhole">
+                <h4>&#x1F573;&#xFE0F; Pinhole / Pit</h4>
+                <p>Porosity voids, coating pinholes, and pitting clusters with dark crater core and rim reflection.</p>
               </div>
             </div>
             <input type="hidden" id="gen-defect" value="scratch" />

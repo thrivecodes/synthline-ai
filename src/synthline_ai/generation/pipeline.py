@@ -10,6 +10,7 @@ from synthline_ai.generation.procedural.variability import apply_defect_variabil
 from synthline_ai.generation.randomization import (
     apply_geometry_variation,
     apply_lighting_variation,
+    apply_sensor_noise,
     apply_texture_variation,
 )
 from synthline_ai.generation.registry import get_generator
@@ -102,6 +103,9 @@ def _apply_randomization(
 
     if config.texture_intensity > 0.0:
         img = apply_texture_variation(img, rng, intensity=config.texture_intensity)
+
+    if config.sensor_intensity > 0.0:
+        img = apply_sensor_noise(img, rng, intensity=config.sensor_intensity)
 
     result.image = img
     result.mask = mask
