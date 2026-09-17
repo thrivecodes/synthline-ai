@@ -157,8 +157,11 @@ def test_cli_invalid_defect(tmp_path: Path) -> None:
 
 
 def test_cli_ui_help() -> None:
-    result = runner.invoke(app, ["ui", "--help"])
+    import re
+
+    result = runner.invoke(app, ["ui", "--help"], color=False)
     assert result.exit_code == 0
-    assert "Launch the SynthLine AI Local Studio" in result.output
-    assert "--host" in result.output
-    assert "--port" in result.output
+    clean_output = re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", result.output)
+    assert "Launch the SynthLine AI Local Studio" in clean_output
+    assert "--host" in clean_output
+    assert "--port" in clean_output
