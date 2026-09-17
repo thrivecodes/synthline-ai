@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "synthline-ai"
 version = "0.1.0"
 description = "Synthetic visual-data generation for computer-vision teams."
-readme = "README.md"
+readme = "README_PYPI.md"
 license = { text = "Apache-2.0" }
 authors = [{ name = "SynthLine AI Team", email = "hello@synthline.ai" }]
 keywords = [
