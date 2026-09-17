@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -241,3 +242,110 @@ def export_yolo(
     yaml_file.write_text("\n".join(yaml_lines) + "\n")
 
     return yaml_file
+
+
+def export_voc(
+    results: list[GenerationResult],
+    output_dir: Path,
+    config: GenerationConfig,
+) -> Path:
+    """Export dataset in Pascal VOC XML annotation format.
+
+    Creates:
+    - output_dir/voc/JPEGImages/
+    - output_dir/voc/Annotations/
+    - output_dir/voc/ImageSets/Main/{train.txt, val.txt, test.txt} (or all.txt)
+    """
+    voc_dir = output_dir / "voc"
+    images_dir = voc_dir / "JPEGImages"
+    annos_dir = voc_dir / "Annotations"
+    sets_dir = voc_dir / "ImageSets" / "Main"
+
+    images_dir.mkdir(parents=True, exist_ok=True)
+    annos_dir.mkdir(parents=True, exist_ok=True)
+    sets_dir.mkdir(parents=True, exist_ok=True)
+
+    split_stems: dict[str, list[str]] = {
+        "train": [],
+        "val": [],
+        "test": [],
+        "default": [],
+    }
+
+    has_splits = config.enable_split and any(
+        getattr(r, "split", "") in ("train", "val", "test") for r in results
+    )
+
+    for idx, res in enumerate(results, start=1):
+        def_type = (
+            res.defect_type.value if hasattr(res.defect_type, "value") else str(res.defect_type)
+        )
+        stem = f"image_{idx:04d}_{def_type}"
+        img_name = f"{stem}.png"
+        img_path = images_dir / img_name
+        cv2.imwrite(str(img_path), res.image)
+
+        split = getattr(res, "split", "train") if has_splits else "default"
+        if split in split_stems:
+            split_stems[split].append(stem)
+
+        h, w = res.image.shape[:2]
+        c = res.image.shape[2] if res.image.ndim == 3 else 1
+
+        root = ET.Element("annotation")
+        ET.SubElement(root, "folder").text = "JPEGImages"
+        ET.SubElement(root, "filename").text = img_name
+        ET.SubElement(root, "path").text = str(img_path.resolve())
+
+        source = ET.SubElement(root, "source")
+        ET.SubElement(source, "database").text = "SynthLine AI"
+
+        size = ET.SubElement(root, "size")
+        ET.SubElement(size, "width").text = str(w)
+        ET.SubElement(size, "height").text = str(h)
+        ET.SubElement(size, "depth").text = str(c)
+
+        ET.SubElement(root, "segmented").text = "1"
+
+        instances_to_write = []
+        if res.instances:
+            for inst in res.instances:
+                inst_type = str(inst.get("defect_type", def_type))
+                inst_mask = inst.get("mask")
+                if isinstance(inst_mask, np.ndarray):
+                    x, y, bw, bh = mask_to_bbox(inst_mask)
+                else:
+                    x, y, bw, bh = mask_to_bbox(res.mask)
+                instances_to_write.append((inst_type, x, y, bw, bh))
+        else:
+            x, y, bw, bh = mask_to_bbox(res.mask)
+            instances_to_write.append((def_type, x, y, bw, bh))
+
+        for itype, x, y, bw, bh in instances_to_write:
+            if bw > 0 and bh > 0:
+                obj = ET.SubElement(root, "object")
+                ET.SubElement(obj, "name").text = itype
+                ET.SubElement(obj, "pose").text = "Unspecified"
+                ET.SubElement(obj, "truncated").text = "0"
+                ET.SubElement(obj, "difficult").text = "0"
+                bndbox = ET.SubElement(obj, "bndbox")
+                ET.SubElement(bndbox, "xmin").text = str(max(0, x))
+                ET.SubElement(bndbox, "ymin").text = str(max(0, y))
+                ET.SubElement(bndbox, "xmax").text = str(min(w, x + bw))
+                ET.SubElement(bndbox, "ymax").text = str(min(h, y + bh))
+
+        ET.indent(root, space="  ")
+        tree = ET.ElementTree(root)
+        tree.write(str(annos_dir / f"{stem}.xml"), encoding="utf-8", xml_declaration=True)
+
+    # Write split lists
+    if has_splits:
+        for s_name in ("train", "val", "test"):
+            lines = split_stems[s_name]
+            if lines:
+                (sets_dir / f"{s_name}.txt").write_text("\n".join(lines) + "\n")
+    else:
+        all_lines = split_stems["default"]
+        (sets_dir / "all.txt").write_text("\n".join(all_lines) + "\n")
+
+    return voc_dir

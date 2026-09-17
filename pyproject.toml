@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "synthline-ai"
-version = "0.2.0"
+version = "0.2.1"
 description = "Synthetic visual-data generation for computer-vision teams."
 readme = "README_PYPI.md"
 license = { text = "Apache-2.0" }

@@ -33,6 +33,7 @@ class ExportFormat(StrEnum):
 
     COCO = "coco"
     YOLO = "yolo"
+    VOC = "voc"
     ALL = "all"
 
 
@@ -64,6 +65,7 @@ class GenerationConfig(BaseModel):
     sensor_intensity: float = Field(default=0.0, ge=0.0, le=1.0)
     compound_defects: bool = Field(default=False)
     defects_per_image: int = Field(default=1, ge=1, le=5)
+    auto_roi: bool = Field(default=False)
 
 
 class ImageInfo(BaseModel):

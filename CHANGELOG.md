@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-09-17
+
+### Added
+- **Workpiece Foreground ROI Engine (`generation/roi.py` & `--auto-roi`)**:
+  - Adaptive Otsu workpiece segmentation distinguishing physical parts from background conveyor belts, inspection tables, and bench tooling.
+  - Defect boundary constraint (`apply_roi_constraint`) ensuring synthetic scratches, cracks, and blemishes are strictly confined to the workpiece surface.
+  - Fully integrated into generation pipeline (`config.auto_roi`), CLI (`--auto-roi`), and Studio UI.
+- **Pascal VOC XML Export Format (`ExportFormat.VOC` & `labeling/export.py`)**:
+  - Standard Pascal VOC format outputting `JPEGImages/`, `Annotations/` (`.xml`), and `ImageSets/Main/` partition listings (`train.txt`, `val.txt`, `test.txt`, or `all.txt`).
+  - Supports single defects as well as compound multi-defect instances with complete `<object>`, `<name>`, and `<bndbox>` elements.
+  - Supported across CLI (`--format voc`), Studio UI, and Python SDK.
+- **Fast Package Management Documentation**:
+  - Added comprehensive `uv` and `uvx` setup guides to `README_PYPI.md` for lightning-fast installs and zero-install CLI execution (`uvx synthline-ai ui`).
+
 ## [0.2.0] - 2026-09-17
 
 ### Added

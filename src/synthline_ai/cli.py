@@ -27,7 +27,7 @@ from synthline_ai.config.models import (
 from synthline_ai.generation.pipeline import run_generation
 from synthline_ai.ingestion.loader import load_seeds
 from synthline_ai.ingestion.quality import check_seed_quality
-from synthline_ai.labeling.export import export_coco, export_yolo
+from synthline_ai.labeling.export import export_coco, export_voc, export_yolo
 from synthline_ai.validation.checks import (
     check_brightness_distribution,
     check_output_duplicates,
@@ -59,7 +59,7 @@ def generate(
     seed: int = typer.Option(42, help="Random seed for reproducibility"),
     severity: float = typer.Option(0.5, min=0.0, max=1.0, help="Defect severity (0.0-1.0)"),
     frequency: float = typer.Option(1.0, min=0.1, max=5.0, help="Defect frequency/density"),
-    format: str = typer.Option("coco", help="Export format (coco, yolo, all)"),
+    format: str = typer.Option("coco", help="Export format (coco, yolo, voc, all)"),
     split: bool = typer.Option(False, help="Enable train/val/test dataset partitioning"),
     train_ratio: float = typer.Option(0.7, min=0.0, max=1.0, help="Train split proportion"),
     val_ratio: float = typer.Option(0.2, min=0.0, max=1.0, help="Validation split proportion"),
@@ -74,6 +74,9 @@ def generate(
     ),
     defects_per_image: int = typer.Option(
         1, min=1, max=5, help="Number of defect instances per workpiece (1-5)"
+    ),
+    auto_roi: bool = typer.Option(
+        False, help="Constrain defects strictly within workpiece boundary"
     ),
 ) -> None:
     """Generate synthetic defect images from seed images."""
@@ -117,6 +120,7 @@ def generate(
         sensor_intensity=sensor if variations else 0.0,
         compound_defects=compound,
         defects_per_image=defects_per_image,
+        auto_roi=auto_roi,
     )
 
     # Step 1: Load seeds
@@ -158,11 +162,14 @@ def generate(
     console.print("\nExporting dataset...")
     coco_path: Path | None = None
     yolo_path: Path | None = None
+    voc_path: Path | None = None
 
     if export_fmt in (ExportFormat.COCO, ExportFormat.ALL):
         coco_path = export_coco(results, output, config)
     if export_fmt in (ExportFormat.YOLO, ExportFormat.ALL):
         yolo_path = export_yolo(results, output, config)
+    if export_fmt in (ExportFormat.VOC, ExportFormat.ALL):
+        voc_path = export_voc(results, output, config)
 
     # Step 5: Contact sheet & Interactive HTML preview
     contact_path = output / "contact-sheet.jpg"
@@ -213,6 +220,10 @@ def generate(
         table.add_row("COCO annotations", str(coco_path))
     if yolo_path:
         table.add_row("YOLO data.yaml", str(yolo_path))
+    if voc_path:
+        table.add_row("Pascal VOC XML", str(voc_path))
+    if config.auto_roi:
+        table.add_row("Workpiece ROI", "[green]Enforced[/green]")
 
     dup_pairs = dup_check.get("duplicate_pairs", 0)
     if isinstance(dup_pairs, int) and dup_pairs > 0:

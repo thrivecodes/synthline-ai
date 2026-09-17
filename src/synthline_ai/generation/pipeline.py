@@ -15,6 +15,7 @@ from synthline_ai.generation.randomization import (
     apply_texture_variation,
 )
 from synthline_ai.generation.registry import get_generator
+from synthline_ai.generation.roi import apply_roi_constraint, compute_roi_mask
 from synthline_ai.labeling.boxes import mask_to_bbox
 from synthline_ai.labeling.masks import mask_area
 
@@ -188,6 +189,18 @@ def _generate_single_sample(
                 }
             )
 
+    if config.auto_roi:
+        roi_mask = compute_roi_mask(image)
+        curr_image, combined_mask = apply_roi_constraint(curr_image, combined_mask, image, roi_mask)
+        if is_compound:
+            for inst in instances:
+                im = inst.get("mask")
+                if isinstance(im, np.ndarray):
+                    c_mask = np.where(roi_mask > 0, im, 0).astype(np.uint8)
+                    inst["mask"] = c_mask
+                    inst["bbox"] = mask_to_bbox(c_mask)
+                    inst["area"] = mask_area(c_mask)
+
     defect_tag = "compound" if is_compound else applied_types[0]
 
     final_res = GenerationResult(
@@ -197,6 +210,7 @@ def _generate_single_sample(
             "defect_types": applied_types,
             "num_instances": len(applied_types),
             "compound": is_compound,
+            "auto_roi": config.auto_roi,
         },
         source_seed=info.path.name,
         defect_type=defect_tag,

@@ -436,7 +436,7 @@
   <header>
     <div class="brand">
       <span class="brand-title">SynthLine AI</span>
-      <span class="brand-tag">Local Studio v0.1.0</span>
+      <span class="brand-tag">Local Studio v0.2.1</span>
     </div>
     <div class="header-info">
       <span id="active-project-tag"><div class="status-dot"></div> Workspace: Active</span>
@@ -779,7 +779,8 @@
                 <select id="gen-format" class="form-control">
                   <option value="coco">COCO Segmentation (annotations.coco.json)</option>
                   <option value="yolo">YOLO Object Detection (data.yaml)</option>
-                  <option value="all">Complete Bundle (COCO + YOLO)</option>
+                  <option value="voc">Pascal VOC XML (Annotations/ + JPEGImages/)</option>
+                  <option value="all">Complete Bundle (COCO + YOLO + VOC)</option>
                 </select>
               </div>
             </div>
@@ -817,6 +818,19 @@
                     <select id="gen-split" class="form-control">
                       <option value="false">Disabled (Single full dataset)</option>
                       <option value="true">Enable 70/20/10 Split (Zero Seed Leakage)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-row" style="margin-top: 0.85rem;">
+                  <div class="form-group">
+                    <label>
+                      <span>Workpiece Foreground ROI</span>
+                      <span id="val-roi-status" class="field-val">Disabled</span>
+                    </label>
+                    <select id="gen-auto-roi" class="form-control" onchange="document.getElementById('val-roi-status').innerText = this.value === 'true' ? 'Enforced' : 'Disabled';">
+                      <option value="false">Disabled (Full image canvas)</option>
+                      <option value="true">Enforced (Workpiece surface only)</option>
                     </select>
                   </div>
                 </div>
@@ -1095,6 +1109,7 @@
         random_seed: parseInt(document.getElementById('gen-seed').value || "42"),
         compound_defects: isCompound,
         defects_per_image: isCompound ? parseInt(document.getElementById('gen-defects-per-image').value || "2") : 1,
+        auto_roi: document.getElementById('gen-auto-roi')?.value === "true",
         enable_variations: true,
         sensor_intensity: parseFloat(document.getElementById('gen-sensor')?.value || "0.10"),
         geometry_intensity: parseFloat(document.getElementById('gen-geometry')?.value || "0.20"),

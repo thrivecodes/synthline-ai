@@ -17,7 +17,7 @@ from synthline_ai.config.models import (
 from synthline_ai.generation.pipeline import run_generation
 from synthline_ai.ingestion.loader import load_seeds
 from synthline_ai.ingestion.quality import check_seed_quality
-from synthline_ai.labeling.export import export_coco, export_yolo
+from synthline_ai.labeling.export import export_coco, export_voc, export_yolo
 from synthline_ai.projects.models import (
     Project,
     ProjectCreate,
@@ -187,6 +187,7 @@ class ProjectManager:
             sensor_intensity=payload.sensor_intensity,
             compound_defects=payload.compound_defects,
             defects_per_image=payload.defects_per_image,
+            auto_roi=payload.auto_roi,
         )
 
         # Run pipeline
@@ -197,6 +198,8 @@ class ProjectManager:
             export_coco(results, run_output_dir, config)
         if payload.export_format in (ExportFormat.YOLO, ExportFormat.ALL):
             export_yolo(results, run_output_dir, config)
+        if payload.export_format in (ExportFormat.VOC, ExportFormat.ALL):
+            export_voc(results, run_output_dir, config)
 
         # Contact sheet
         contact_path = run_output_dir / "contact-sheet.jpg"
