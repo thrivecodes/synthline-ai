@@ -180,6 +180,13 @@ class ProjectManager:
             enable_split=payload.enable_split,
             split_ratio=payload.split_ratio,
             export_format=payload.export_format,
+            enable_variations=payload.enable_variations,
+            lighting_intensity=payload.lighting_intensity,
+            texture_intensity=payload.texture_intensity,
+            geometry_intensity=payload.geometry_intensity,
+            sensor_intensity=payload.sensor_intensity,
+            compound_defects=payload.compound_defects,
+            defects_per_image=payload.defects_per_image,
         )
 
         # Run pipeline

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from synthline_ai.generation.base import BaseGenerator
 from synthline_ai.generation.procedural.crack import CrackGenerator
+from synthline_ai.generation.procedural.dent import DentGenerator
 from synthline_ai.generation.procedural.discoloration import DiscolorationGenerator
 from synthline_ai.generation.procedural.pinhole import PinholeGenerator
 from synthline_ai.generation.procedural.scratch import ScratchGenerator
@@ -33,3 +34,4 @@ register("stain", StainGenerator)
 register("discoloration", DiscolorationGenerator)
 register("crack", CrackGenerator)
 register("pinhole", PinholeGenerator)
+register("dent", DentGenerator)

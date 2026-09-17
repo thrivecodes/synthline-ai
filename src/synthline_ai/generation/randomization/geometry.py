@@ -12,21 +12,12 @@ def apply_geometry_variation(
     rng: np.random.RandomState,
     max_rotation_deg: float = 3.0,
     max_shift_px: int = 4,
+    extra_masks: list[np.ndarray] | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Apply slight rotation and sub-pixel translation to image and defect mask.
 
     Both image and mask undergo identical affine transformations to guarantee
     exact label registration without drift.
-
-    Args:
-        image: Source image array (H, W, C) or (H, W) in uint8.
-        mask: Defect binary mask (H, W) in uint8 (0 and 255).
-        rng: Reproducible numpy RandomState.
-        max_rotation_deg: Maximum rotation angle in degrees (+/-).
-        max_shift_px: Maximum translation shift in pixels (+/-).
-
-    Returns:
-        (transformed_image, transformed_mask) tuple.
     """
     h, w = image.shape[:2]
     center = (w / 2.0, h / 2.0)
@@ -60,5 +51,17 @@ def apply_geometry_variation(
 
     # Ensure mask remains strictly binary {0, 255}
     transformed_mask = np.where(transformed_mask > 127, np.uint8(255), np.uint8(0))
+
+    if extra_masks is not None:
+        for idx, em in enumerate(extra_masks):
+            warped = cv2.warpAffine(
+                em,
+                matrix,
+                (w, h),
+                flags=cv2.INTER_NEAREST,
+                borderMode=cv2.BORDER_CONSTANT,
+                borderValue=0,
+            )
+            extra_masks[idx][:] = np.where(warped > 127, np.uint8(255), np.uint8(0))
 
     return transformed_image, transformed_mask

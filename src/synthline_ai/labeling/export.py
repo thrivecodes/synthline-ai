@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import cv2
+import numpy as np
 
 from synthline_ai.config.models import GenerationConfig
 from synthline_ai.generation.base import GenerationResult
@@ -43,20 +44,13 @@ def export_coco(
     }
 
     category_map: dict[str, int] = {}
+    annotation_id = 1
 
     with open(metadata_file, "w") as f_meta:
         for idx, res in enumerate(results, start=1):
             def_type = (
                 res.defect_type.value if hasattr(res.defect_type, "value") else str(res.defect_type)
             )
-            if def_type not in category_map:
-                cat_id = len(category_map) + 1
-                category_map[def_type] = cat_id
-                coco_data["categories"].append(
-                    {"id": cat_id, "name": def_type, "supercategory": "defect"}
-                )
-            else:
-                cat_id = category_map[def_type]
 
             img_name = f"image_{idx:04d}_{def_type}.png"
             mask_name = f"mask_{idx:04d}_{def_type}.png"
@@ -74,21 +68,67 @@ def export_coco(
                 {"id": idx, "file_name": img_name, "width": int(w), "height": int(h)}
             )
 
-            bbox = mask_to_bbox(res.mask)
-            area = mask_area(res.mask)
-            poly = mask_to_polygon(res.mask)
+            if res.instances:
+                for inst in res.instances:
+                    inst_type = str(inst.get("defect_type", def_type))
+                    if inst_type not in category_map:
+                        cat_id = len(category_map) + 1
+                        category_map[inst_type] = cat_id
+                        coco_data["categories"].append(
+                            {"id": cat_id, "name": inst_type, "supercategory": "defect"}
+                        )
+                    else:
+                        cat_id = category_map[inst_type]
 
-            coco_data["annotations"].append(
-                {
-                    "id": idx,
-                    "image_id": idx,
-                    "category_id": cat_id,
-                    "bbox": list(bbox),
-                    "area": area,
-                    "segmentation": poly,
-                    "iscrowd": 0,
-                }
-            )
+                    inst_mask = inst.get("mask")
+                    if isinstance(inst_mask, np.ndarray):
+                        bbox = mask_to_bbox(inst_mask)
+                        area = mask_area(inst_mask)
+                        poly = mask_to_polygon(inst_mask)
+                    else:
+                        bbox = mask_to_bbox(res.mask)
+                        area = mask_area(res.mask)
+                        poly = mask_to_polygon(res.mask)
+
+                    if area > 0:
+                        coco_data["annotations"].append(
+                            {
+                                "id": annotation_id,
+                                "image_id": idx,
+                                "category_id": cat_id,
+                                "bbox": list(bbox),
+                                "area": area,
+                                "segmentation": poly,
+                                "iscrowd": 0,
+                            }
+                        )
+                        annotation_id += 1
+            else:
+                if def_type not in category_map:
+                    cat_id = len(category_map) + 1
+                    category_map[def_type] = cat_id
+                    coco_data["categories"].append(
+                        {"id": cat_id, "name": def_type, "supercategory": "defect"}
+                    )
+                else:
+                    cat_id = category_map[def_type]
+
+                bbox = mask_to_bbox(res.mask)
+                area = mask_area(res.mask)
+                poly = mask_to_polygon(res.mask)
+
+                coco_data["annotations"].append(
+                    {
+                        "id": annotation_id,
+                        "image_id": idx,
+                        "category_id": cat_id,
+                        "bbox": list(bbox),
+                        "area": area,
+                        "segmentation": poly,
+                        "iscrowd": 0,
+                    }
+                )
+                annotation_id += 1
 
             meta_line = {
                 "image": img_name,
@@ -122,15 +162,17 @@ def export_yolo(
     yolo_dir = output_dir / "yolo"
     yolo_dir.mkdir(parents=True, exist_ok=True)
 
-    # Category mapping (0-indexed for YOLO)
-    categories = sorted(
-        list(
-            {
+    # Category mapping across top-level defect types and instances
+    cat_set = set()
+    for res in results:
+        if res.instances:
+            for inst in res.instances:
+                cat_set.add(str(inst.get("defect_type", res.defect_type)))
+        else:
+            cat_set.add(
                 res.defect_type.value if hasattr(res.defect_type, "value") else str(res.defect_type)
-                for res in results
-            }
-        )
-    )
+            )
+    categories = sorted(list(cat_set))
     class_map = {name: idx for idx, name in enumerate(categories)}
 
     has_splits = config.enable_split and any(
@@ -159,13 +201,30 @@ def export_yolo(
         cv2.imwrite(str(img_dest_dir / img_name), res.image)
 
         h, w = res.image.shape[:2]
-        x_c, y_c, norm_w, norm_h = mask_to_yolo_bbox(res.mask, img_width=w, img_height=h)
-
-        class_id = class_map[def_type]
         lbl_path = lbl_dest_dir / txt_name
         with open(lbl_path, "w") as f_lbl:
-            if norm_w > 0 and norm_h > 0:
-                f_lbl.write(f"{class_id} {x_c:.6f} {y_c:.6f} {norm_w:.6f} {norm_h:.6f}\n")
+            if res.instances:
+                for inst in res.instances:
+                    inst_type = str(inst.get("defect_type", def_type))
+                    inst_mask = inst.get("mask")
+                    if isinstance(inst_mask, np.ndarray):
+                        x_c, y_c, norm_w, norm_h = mask_to_yolo_bbox(
+                            inst_mask, img_width=w, img_height=h
+                        )
+                    else:
+                        x_c, y_c, norm_w, norm_h = mask_to_yolo_bbox(
+                            res.mask, img_width=w, img_height=h
+                        )
+                    if norm_w > 0 and norm_h > 0 and inst_type in class_map:
+                        class_id = class_map[inst_type]
+                        f_lbl.write(f"{class_id} {x_c:.6f} {y_c:.6f} {norm_w:.6f} {norm_h:.6f}\n")
+            else:
+                x_c, y_c, norm_w, norm_h = mask_to_yolo_bbox(
+                    res.mask, img_width=w, img_height=h
+                )
+                if norm_w > 0 and norm_h > 0 and def_type in class_map:
+                    class_id = class_map[def_type]
+                    f_lbl.write(f"{class_id} {x_c:.6f} {y_c:.6f} {norm_w:.6f} {norm_h:.6f}\n")
 
     # Generate data.yaml
     yaml_lines = [

@@ -738,6 +738,14 @@
                 <h4>&#x1F573;&#xFE0F; Pinhole / Pit</h4>
                 <p>Porosity voids, coating pinholes, and pitting clusters with dark crater core and rim reflection.</p>
               </div>
+              <div class="defect-card" onclick="selectDefectCard('dent')" id="card-dent">
+                <h4>&#x1F528; Dent / Bump</h4>
+                <p>3D surface depressions and bumps with directional lighting shading and specular highlight rims.</p>
+              </div>
+              <div class="defect-card" onclick="selectDefectCard('mixed')" id="card-mixed">
+                <h4>&#x1F500; Mixed Defect Mix</h4>
+                <p>Balanced multi-class distribution across scratches, stains, discolorations, cracks, pinholes, and dents.</p>
+              </div>
             </div>
             <input type="hidden" id="gen-defect" value="scratch" />
 
@@ -776,8 +784,28 @@
               </div>
             </div>
 
+            <div class="form-row">
+              <div class="form-group">
+                <label>
+                  <span>Multi-Defect Compound Mode</span>
+                  <span id="val-compound-status" class="field-val">Disabled</span>
+                </label>
+                <select id="gen-compound" class="form-control" onchange="document.getElementById('val-compound-status').innerText = this.value === 'true' ? 'Active' : 'Disabled'; document.getElementById('defects-per-img-box').style.display = this.value === 'true' ? 'block' : 'none';">
+                  <option value="false">Single Defect Instance</option>
+                  <option value="true">Compound Multi-Defects per Workpiece</option>
+                </select>
+              </div>
+              <div class="form-group" id="defects-per-img-box" style="display: none;">
+                <label>
+                  <span>Defects Per Workpiece</span>
+                  <span id="val-defects-per-image" class="field-val">2</span>
+                </label>
+                <input type="range" id="gen-defects-per-image" class="form-control" min="2" max="5" step="1" value="2" oninput="document.getElementById('val-defects-per-image').innerText = this.value" />
+              </div>
+            </div>
+
             <details class="advanced-box">
-              <summary>Advanced Options (Reproducibility & Leakage Prevention)</summary>
+              <summary>Advanced Options (Sensor Optics, Jitter & Split)</summary>
               <div class="content">
                 <div class="form-row">
                   <div class="form-group">
@@ -790,6 +818,40 @@
                       <option value="false">Disabled (Single full dataset)</option>
                       <option value="true">Enable 70/20/10 Split (Zero Seed Leakage)</option>
                     </select>
+                  </div>
+                </div>
+
+                <div class="form-row" style="margin-top: 0.85rem;">
+                  <div class="form-group">
+                    <label>
+                      <span>Camera Sensor Noise</span>
+                      <span id="val-sensor" class="field-val">0.10</span>
+                    </label>
+                    <input type="range" id="gen-sensor" class="form-control" min="0.0" max="1.0" step="0.05" value="0.10" oninput="document.getElementById('val-sensor').innerText = parseFloat(this.value).toFixed(2)" />
+                  </div>
+                  <div class="form-group">
+                    <label>
+                      <span>Geometric Shift / Jitter</span>
+                      <span id="val-geometry" class="field-val">0.20</span>
+                    </label>
+                    <input type="range" id="gen-geometry" class="form-control" min="0.0" max="1.0" step="0.05" value="0.20" oninput="document.getElementById('val-geometry').innerText = parseFloat(this.value).toFixed(2)" />
+                  </div>
+                </div>
+
+                <div class="form-row" style="margin-top: 0.5rem;">
+                  <div class="form-group">
+                    <label>
+                      <span>Lighting Variations</span>
+                      <span id="val-lighting" class="field-val">0.15</span>
+                    </label>
+                    <input type="range" id="gen-lighting" class="form-control" min="0.0" max="1.0" step="0.05" value="0.15" oninput="document.getElementById('val-lighting').innerText = parseFloat(this.value).toFixed(2)" />
+                  </div>
+                  <div class="form-group">
+                    <label>
+                      <span>Surface Micro-Texture</span>
+                      <span id="val-texture" class="field-val">0.10</span>
+                    </label>
+                    <input type="range" id="gen-texture" class="form-control" min="0.0" max="1.0" step="0.05" value="0.10" oninput="document.getElementById('val-texture').innerText = parseFloat(this.value).toFixed(2)" />
                   </div>
                 </div>
               </div>
@@ -1022,6 +1084,7 @@
       btn.disabled = true;
       btn.innerHTML = "&#9203; Generating Synthetic Variations...";
 
+      const isCompound = document.getElementById('gen-compound').value === "true";
       const payload = {
         defect_type: document.getElementById('gen-defect').value,
         count: parseInt(document.getElementById('gen-count').value),
@@ -1030,6 +1093,13 @@
         export_format: document.getElementById('gen-format').value,
         enable_split: document.getElementById('gen-split').value === "true",
         random_seed: parseInt(document.getElementById('gen-seed').value || "42"),
+        compound_defects: isCompound,
+        defects_per_image: isCompound ? parseInt(document.getElementById('gen-defects-per-image').value || "2") : 1,
+        enable_variations: true,
+        sensor_intensity: parseFloat(document.getElementById('gen-sensor')?.value || "0.10"),
+        geometry_intensity: parseFloat(document.getElementById('gen-geometry')?.value || "0.20"),
+        lighting_intensity: parseFloat(document.getElementById('gen-lighting')?.value || "0.15"),
+        texture_intensity: parseFloat(document.getElementById('gen-texture')?.value || "0.10"),
       };
 
       try {

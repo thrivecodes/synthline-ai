@@ -29,6 +29,7 @@ class GenerationResult:
     defect_type: str = ""
     random_seed: int = 0
     split: str = "train"
+    instances: list[dict[str, object]] = field(default_factory=list)
 
 
 class BaseGenerator(ABC):

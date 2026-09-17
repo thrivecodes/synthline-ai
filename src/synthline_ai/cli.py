@@ -52,7 +52,7 @@ def generate(
     seeds: Path = typer.Option(..., help="Directory of seed images"),
     defect: str = typer.Option(
         "scratch",
-        help="Defect type (scratch, stain, discoloration, crack, pinhole)",
+        help="Defect type (scratch, stain, discoloration, crack, pinhole, dent, mixed)",
     ),
     count: int = typer.Option(100, min=1, max=10000, help="Number of images to generate"),
     output: Path = typer.Option(..., help="Output directory"),
@@ -69,6 +69,12 @@ def generate(
     texture: float = typer.Option(0.15, min=0.0, max=1.0, help="Texture variation intensity"),
     geometry: float = typer.Option(0.5, min=0.0, max=1.0, help="Geometric affine jitter intensity"),
     sensor: float = typer.Option(0.1, min=0.0, max=1.0, help="Sensor noise intensity"),
+    compound: bool = typer.Option(
+        False, help="Enable compound multi-defect generation per workpiece"
+    ),
+    defects_per_image: int = typer.Option(
+        1, min=1, max=5, help="Number of defect instances per workpiece (1-5)"
+    ),
 ) -> None:
     """Generate synthetic defect images from seed images."""
     start_time = time.time()
@@ -109,6 +115,8 @@ def generate(
         texture_intensity=texture if variations else 0.0,
         geometry_intensity=geometry if variations else 0.0,
         sensor_intensity=sensor if variations else 0.0,
+        compound_defects=compound,
+        defects_per_image=defects_per_image,
     )
 
     # Step 1: Load seeds

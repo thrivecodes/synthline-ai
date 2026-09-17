@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import cv2
 import numpy as np
 
-from synthline_ai.config.models import DatasetSplit, GenerationConfig, ImageInfo
+from synthline_ai.config.models import DatasetSplit, DefectType, GenerationConfig, ImageInfo
 from synthline_ai.generation.base import GenerationResult
 from synthline_ai.generation.procedural.variability import apply_defect_variability
 from synthline_ai.generation.randomization import (
@@ -14,6 +15,17 @@ from synthline_ai.generation.randomization import (
     apply_texture_variation,
 )
 from synthline_ai.generation.registry import get_generator
+from synthline_ai.labeling.boxes import mask_to_bbox
+from synthline_ai.labeling.masks import mask_area
+
+AVAILABLE_MIXED_DEFECTS: list[str] = [
+    "scratch",
+    "stain",
+    "discoloration",
+    "crack",
+    "pinhole",
+    "dent",
+]
 
 
 def partition_seeds(
@@ -90,13 +102,24 @@ def _apply_randomization(
     if config.geometry_intensity > 0.0:
         max_rot = 3.0 * config.geometry_intensity
         max_shift = int(4 * config.geometry_intensity) or 1
+        extra_masks: list[np.ndarray] = [
+            inst["mask"]  # type: ignore[misc]
+            for inst in result.instances
+            if isinstance(inst.get("mask"), np.ndarray)
+        ]
         img, mask = apply_geometry_variation(
             img,
             mask,
             rng,
             max_rotation_deg=max_rot,
             max_shift_px=max_shift,
+            extra_masks=extra_masks if extra_masks else None,
         )
+        for inst in result.instances:
+            im = inst.get("mask")
+            if isinstance(im, np.ndarray):
+                inst["bbox"] = mask_to_bbox(im)
+                inst["area"] = mask_area(im)
 
     if config.lighting_intensity > 0.0:
         img = apply_lighting_variation(img, rng, intensity=config.lighting_intensity)
@@ -112,6 +135,79 @@ def _apply_randomization(
     return result
 
 
+def _generate_single_sample(
+    image: np.ndarray,
+    info: ImageInfo,
+    config: GenerationConfig,
+    sample_seed: int,
+    split_name: str,
+) -> GenerationResult:
+    """Generate a single sample, supporting single, mixed, or compound defect instances."""
+    rng = np.random.RandomState(sample_seed)
+    is_mixed = config.defect_type == DefectType.MIXED
+    is_compound = config.compound_defects or config.defects_per_image > 1
+    num_passes = (
+        config.defects_per_image
+        if config.defects_per_image > 1
+        else (2 if config.compound_defects else 1)
+    )
+
+    curr_image = image.copy()
+    combined_mask: np.ndarray = np.zeros(image.shape[:2], dtype=np.uint8)
+    instances: list[dict[str, object]] = []
+    applied_types: list[str] = []
+
+    for k in range(num_passes):
+        instance_seed = sample_seed * 1000 + k
+        if is_mixed:
+            defect_name = str(rng.choice(AVAILABLE_MIXED_DEFECTS))
+        else:
+            defect_name = config.defect_type.value
+
+        generator = get_generator(defect_name)
+        gen_res = generator.generate(
+            image=curr_image,
+            seed_name=info.path.name,
+            random_seed=instance_seed,
+            severity=config.severity,
+            frequency=config.frequency,
+        )
+
+        curr_image = gen_res.image
+        bitwise_mask = cv2.bitwise_or(combined_mask, gen_res.mask)
+        combined_mask = bitwise_mask.astype(np.uint8)
+        applied_types.append(defect_name)
+
+        if is_compound:
+            instances.append(
+                {
+                    "defect_type": defect_name,
+                    "mask": gen_res.mask.copy(),
+                    "bbox": mask_to_bbox(gen_res.mask),
+                    "area": mask_area(gen_res.mask),
+                }
+            )
+
+    defect_tag = "compound" if is_compound else applied_types[0]
+
+    final_res = GenerationResult(
+        image=curr_image,
+        mask=combined_mask,
+        metadata={
+            "defect_types": applied_types,
+            "num_instances": len(applied_types),
+            "compound": is_compound,
+        },
+        source_seed=info.path.name,
+        defect_type=defect_tag,
+        random_seed=sample_seed,
+        split=split_name,
+        instances=instances,
+    )
+
+    return _apply_randomization(final_res, config, sample_seed)
+
+
 def run_generation(
     config: GenerationConfig,
     images: list[np.ndarray],
@@ -123,25 +219,20 @@ def run_generation(
     if not images or not image_infos:
         return results
 
-    generator = get_generator(config.defect_type.value)
-
     if not config.enable_split:
-        # Standard generation without splits
         for i in range(config.count):
             image = images[i % len(images)]
             info = image_infos[i % len(image_infos)]
             per_image_seed = config.random_seed + i
 
-            result = generator.generate(
+            res = _generate_single_sample(
                 image=image,
-                seed_name=info.path.name,
-                random_seed=per_image_seed,
-                severity=config.severity,
-                frequency=config.frequency,
+                info=info,
+                config=config,
+                sample_seed=per_image_seed,
+                split_name=DatasetSplit.TRAIN.value,
             )
-            result = _apply_randomization(result, config, per_image_seed)
-            result.split = DatasetSplit.TRAIN.value
-            results.append(result)
+            results.append(res)
         return results
 
     # Partition seeds by split first
@@ -182,16 +273,14 @@ def run_generation(
             info = image_infos[seed_idx]
             per_image_seed = config.random_seed + sample_idx
 
-            result = generator.generate(
+            res = _generate_single_sample(
                 image=image,
-                seed_name=info.path.name,
-                random_seed=per_image_seed,
-                severity=config.severity,
-                frequency=config.frequency,
+                info=info,
+                config=config,
+                sample_seed=per_image_seed,
+                split_name=s_name,
             )
-            result = _apply_randomization(result, config, per_image_seed)
-            result.split = s_name
-            results.append(result)
+            results.append(res)
             sample_idx += 1
 
     return results
