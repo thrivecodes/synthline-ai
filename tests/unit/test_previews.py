@@ -7,7 +7,9 @@ from synthline_ai.generation.base import GenerationResult
 from synthline_ai.validation.previews import create_contact_sheet
 
 
-def _make_result(h=64, w=64, mask_fill=True, seed=0):
+def _make_result(
+    h: int = 64, w: int = 64, mask_fill: bool = True, seed: int = 0
+) -> GenerationResult:
     rng = np.random.RandomState(seed)
     image = rng.randint(100, 200, (h, w, 3), dtype=np.uint8)
     mask = np.zeros((h, w), dtype=np.uint8)
@@ -22,7 +24,7 @@ def _make_result(h=64, w=64, mask_fill=True, seed=0):
     )
 
 
-def test_contact_sheet_created(tmp_path: Path):
+def test_contact_sheet_created(tmp_path: Path) -> None:
     results = [_make_result(seed=i) for i in range(4)]
     out_path = tmp_path / "sheet.jpg"
 
@@ -36,7 +38,7 @@ def test_contact_sheet_created(tmp_path: Path):
     assert img.shape[2] == 3
 
 
-def test_contact_sheet_max_samples(tmp_path: Path):
+def test_contact_sheet_max_samples(tmp_path: Path) -> None:
     results = [_make_result(seed=i) for i in range(20)]
     out_path = tmp_path / "sheet_max.jpg"
 
@@ -44,6 +46,7 @@ def test_contact_sheet_max_samples(tmp_path: Path):
 
     assert out_path.exists()
     img = cv2.imread(str(out_path))
+    assert img is not None
 
     # 8 samples -> max 4 cols -> 4 cols.
     # 8 samples -> 2 pairs -> 4 rows.

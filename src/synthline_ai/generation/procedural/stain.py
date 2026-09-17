@@ -58,9 +58,7 @@ class StainGenerator(BaseGenerator):
 
             # Smooth out and feather the edges using Gaussian blur
             ksize = int(max(3, (base_radius // 2) * 2 + 1))
-            spot_mask = np.asarray(
-                cv2.GaussianBlur(spot_mask, (ksize, ksize), 0), dtype=np.uint8
-            )
+            spot_mask = np.asarray(cv2.GaussianBlur(spot_mask, (ksize, ksize), 0), dtype=np.uint8)
 
             # Organic thresholding with noise
             noise = rng.randint(0, 50, (h, w), dtype=np.uint8)
@@ -69,7 +67,6 @@ class StainGenerator(BaseGenerator):
             spot_bin_u8 = np.asarray(spot_bin, dtype=np.uint8)
 
             full_mask = np.asarray(cv2.bitwise_or(full_mask, spot_bin_u8), dtype=np.uint8)
-
 
         mask_bool = full_mask > 0
         total_stain_pixels = int(np.count_nonzero(mask_bool))
@@ -111,7 +108,6 @@ class StainGenerator(BaseGenerator):
             "opacity": alpha,
             "frequency": frequency,
         }
-
 
         return GenerationResult(
             image=output,

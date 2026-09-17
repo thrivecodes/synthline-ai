@@ -17,7 +17,11 @@ dependencies = [
     "pydantic>=2.0",
     "typer[all]>=0.9",
     "rich>=13.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
+    "python-multipart>=0.0.6",
 ]
+
 
 [project.optional-dependencies]
 dev = [
@@ -25,7 +29,9 @@ dev = [
     "pytest-cov>=4.1",
     "ruff>=0.1",
     "mypy>=1.5",
+    "httpx>=0.24",
 ]
+
 
 [project.scripts]
 synthline-ai = "synthline_ai.cli:app"

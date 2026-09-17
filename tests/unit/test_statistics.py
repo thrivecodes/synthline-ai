@@ -4,7 +4,9 @@ from synthline_ai.generation.base import GenerationResult
 from synthline_ai.validation.statistics import compute_statistics
 
 
-def _make_result(h=64, w=64, mask_fill=True, seed=0):
+def _make_result(
+    h: int = 64, w: int = 64, mask_fill: bool = True, seed: int = 0
+) -> GenerationResult:
     rng = np.random.RandomState(seed)
     image = rng.randint(100, 200, (h, w, 3), dtype=np.uint8)
     mask = np.zeros((h, w), dtype=np.uint8)
@@ -19,7 +21,7 @@ def _make_result(h=64, w=64, mask_fill=True, seed=0):
     )
 
 
-def test_basic_stats():
+def test_basic_stats() -> None:
     results = [_make_result(seed=i) for i in range(5)]
     stats = compute_statistics(results)
 
@@ -30,11 +32,12 @@ def test_basic_stats():
     # 200 pixels out of 64x64=4096 is ~4.88%
     area_pct = (200 / 4096) * 100.0
     mask_stats = stats["mask_area_stats"]
-    assert np.isclose(mask_stats["min"], area_pct)
-    assert np.isclose(mask_stats["max"], area_pct)
+    assert isinstance(mask_stats, dict)
+    assert np.isclose(float(mask_stats["min"]), area_pct)
+    assert np.isclose(float(mask_stats["max"]), area_pct)
 
 
-def test_empty_results():
+def test_empty_results() -> None:
     stats = compute_statistics([])
     assert stats["total_images"] == 0
     assert stats["generation_success_rate"] == 0.0

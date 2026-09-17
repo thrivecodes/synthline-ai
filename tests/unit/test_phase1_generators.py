@@ -18,6 +18,7 @@ def test_stain_generator_output() -> None:
     assert res.mask.shape == (128, 128)
     assert np.count_nonzero(res.mask) > 0
     assert set(np.unique(res.mask)).issubset({0, 255})
+    assert isinstance(res.metadata["num_spots"], int)
     assert res.metadata["num_spots"] >= 1
 
 

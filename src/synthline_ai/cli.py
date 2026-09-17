@@ -192,5 +192,19 @@ def info() -> None:
     console.print(f"[bold]Available generators:[/bold] {', '.join(available_generators())}\n")
 
 
+@app.command()
+def ui(
+    host: str = typer.Option("127.0.0.1", help="Host interface to bind to"),
+    port: int = typer.Option(8000, help="Port to run the studio server on"),
+    reload: bool = typer.Option(False, help="Enable auto-reload for development"),
+) -> None:
+    """Launch the SynthLine AI Local Studio web interface."""
+    import uvicorn
+
+    console.print(f"\n[bold]SynthLine AI[/bold] Studio v{__version__}")
+    console.print(f"Starting server at [link=http://{host}:{port}]http://{host}:{port}[/link]\n")
+    uvicorn.run("synthline_ai.web.app:app", host=host, port=port, reload=reload)
+
+
 if __name__ == "__main__":
     app()

@@ -105,3 +105,11 @@ def test_cli_invalid_defect(tmp_path: Path) -> None:
     )
     assert result.exit_code != 0
     assert "Unknown defect type" in result.output
+
+
+def test_cli_ui_help() -> None:
+    result = runner.invoke(app, ["ui", "--help"])
+    assert result.exit_code == 0
+    assert "Launch the SynthLine AI Local Studio" in result.output
+    assert "--host" in result.output
+    assert "--port" in result.output

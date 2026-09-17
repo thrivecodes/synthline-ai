@@ -98,7 +98,6 @@ class DiscolorationGenerator(BaseGenerator):
             "frequency": frequency,
         }
 
-
         return GenerationResult(
             image=output,
             mask=mask,

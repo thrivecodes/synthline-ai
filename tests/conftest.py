@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 import cv2
@@ -10,7 +11,7 @@ import pytest
 
 
 @pytest.fixture()
-def seed_image_factory(tmp_path: Path):
+def seed_image_factory(tmp_path: Path) -> Callable[..., Path]:
     """Factory fixture that creates synthetic test images.
 
     Returns a callable that creates a directory of small PNG seed images.
