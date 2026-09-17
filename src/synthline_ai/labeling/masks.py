@@ -14,7 +14,6 @@ def validate_mask(mask: np.ndarray) -> bool:
     return all(val in (0, 255) for val in unique_vals)
 
 
-
 def mask_area(mask: np.ndarray) -> int:
     """Count non-zero pixels in the mask."""
     return int(np.count_nonzero(mask))

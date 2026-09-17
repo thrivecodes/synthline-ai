@@ -19,6 +19,7 @@ class GenerationResult:
         source_seed: Filename of the source seed image.
         defect_type: String name of the defect type (e.g. "scratch").
         random_seed: The random seed used for this specific generation.
+        split: Optional dataset partition assignment ('train', 'val', 'test').
     """
 
     image: np.ndarray
@@ -27,6 +28,7 @@ class GenerationResult:
     source_seed: str = ""
     defect_type: str = ""
     random_seed: int = 0
+    split: str = "train"
 
 
 class BaseGenerator(ABC):
@@ -39,6 +41,7 @@ class BaseGenerator(ABC):
         seed_name: str,
         random_seed: int,
         severity: float,
+        frequency: float = 1.0,
     ) -> GenerationResult:
         """Generate a single defective image from a source image.
 
@@ -47,6 +50,7 @@ class BaseGenerator(ABC):
             seed_name: Filename of the source seed image.
             random_seed: Random seed for reproducibility.
             severity: Defect severity from 0.0 (subtle) to 1.0 (severe).
+            frequency: Defect frequency / occurrence density (default: 1.0).
 
         Returns:
             A GenerationResult containing the modified image, mask, and metadata.

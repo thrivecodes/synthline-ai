@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from synthline_ai.generation.base import BaseGenerator
+from synthline_ai.generation.procedural.discoloration import DiscolorationGenerator
 from synthline_ai.generation.procedural.scratch import ScratchGenerator
+from synthline_ai.generation.procedural.stain import StainGenerator
 
 _REGISTRY: dict[str, type[BaseGenerator]] = {}
 
@@ -25,4 +27,5 @@ def available_generators() -> list[str]:
 
 # Auto-register default generators
 register("scratch", ScratchGenerator)
-
+register("stain", StainGenerator)
+register("discoloration", DiscolorationGenerator)

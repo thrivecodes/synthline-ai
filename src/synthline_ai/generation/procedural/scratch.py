@@ -20,6 +20,7 @@ class ScratchGenerator(BaseGenerator):
         seed_name: str,
         random_seed: int,
         severity: float,
+        frequency: float = 1.0,
     ) -> GenerationResult:
         """
         Generate a scratch defect on the image.
@@ -38,46 +39,47 @@ class ScratchGenerator(BaseGenerator):
 
         # Create blank mask
         mask = np.zeros((h, w), dtype=np.uint8)
+        num_strokes = max(1, int(round(frequency)))
+        total_length_pixels = 0.0
 
-        # Generate random scratch path
-        num_points = rng.randint(2, max(3, int(severity * 5) + 3))
-        points = []
-        for _ in range(num_points):
-            points.append([rng.randint(0, w), rng.randint(0, h)])
+        for _ in range(num_strokes):
+            # Generate random scratch path
+            num_points = rng.randint(2, max(3, int(severity * 5) + 3))
+            points = []
+            for _ in range(num_points):
+                points.append([rng.randint(0, w), rng.randint(0, h)])
 
-        # Interpolate a smooth polyline
-        if num_points > 2:
-            pts = np.array(points)
-            t = np.linspace(0, 1, len(pts))
-            t_interp = np.linspace(0, 1, max(10, len(pts) * 5))
-            x_interp = np.interp(t_interp, t, pts[:, 0])
-            y_interp = np.interp(t_interp, t, pts[:, 1])
-            points_interp = np.column_stack((x_interp, y_interp))
-            curve_pts = points_interp.astype(np.int32).reshape((-1, 1, 2))
-        else:
-            curve_pts = np.array(points, dtype=np.int32).reshape((-1, 1, 2))
-            points_interp = np.array(points, dtype=np.float64)
+            # Interpolate a smooth polyline
+            if num_points > 2:
+                pts = np.array(points)
+                t = np.linspace(0, 1, len(pts))
+                t_interp = np.linspace(0, 1, max(10, len(pts) * 5))
+                x_interp = np.interp(t_interp, t, pts[:, 0])
+                y_interp = np.interp(t_interp, t, pts[:, 1])
+                points_interp = np.column_stack((x_interp, y_interp))
+                curve_pts = points_interp.astype(np.int32).reshape((-1, 1, 2))
+            else:
+                curve_pts = np.array(points, dtype=np.int32).reshape((-1, 1, 2))
+                points_interp = np.array(points, dtype=np.float64)
 
+            # Draw polyline on the mask
+            width = 1 + int(severity * 4)
+            cv2.polylines(
+                mask, [curve_pts], isClosed=False, color=255, thickness=width, lineType=cv2.LINE_AA
+            )
 
-        # Draw polyline on the mask
-        width = 1 + int(severity * 4)
-        cv2.polylines(
-            mask, [curve_pts], isClosed=False, color=255, thickness=width, lineType=cv2.LINE_AA
-        )
+            if len(points_interp) > 1:
+                total_length_pixels += float(
+                    np.sum(np.linalg.norm(np.diff(points_interp, axis=0), axis=1))
+                )
 
         # Optionally apply slight Gaussian blur to the mask for softer edges
         if severity > 0.0:
             mask = np.asarray(cv2.GaussianBlur(mask, (3, 3), 0), dtype=np.uint8)
 
-
         # Composite the scratch onto a COPY of the source image
         output = image.copy()
-
-        # Approximate path length
-        if len(points_interp) > 1:
-            length_pixels = float(np.sum(np.linalg.norm(np.diff(points_interp, axis=0), axis=1)))
-        else:
-            length_pixels = 0.0
+        length_pixels = total_length_pixels
 
         alpha = np.clip(0.3 + severity * 0.6, 0.3, 0.9)
 
@@ -121,7 +123,6 @@ class ScratchGenerator(BaseGenerator):
         # Ensure the final mask is binary
         _, mask_bin = cv2.threshold(mask, 0, 255, cv2.THRESH_BINARY)
         mask = np.asarray(mask_bin, dtype=np.uint8)
-
 
         metadata = {
             "width": width,

@@ -139,4 +139,3 @@ def test_pipeline_deterministic(tmp_path: Path) -> None:
     for r1, r2 in zip(results1, results2, strict=True):
         np.testing.assert_array_equal(r1.image, r2.image)
         np.testing.assert_array_equal(r1.mask, r2.mask)
-

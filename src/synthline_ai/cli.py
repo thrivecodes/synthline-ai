@@ -18,11 +18,16 @@ from rich.progress import (
 from rich.table import Table
 
 from synthline_ai import __version__
-from synthline_ai.config.models import DefectType, GenerationConfig
+from synthline_ai.config.models import (
+    DefectType,
+    ExportFormat,
+    GenerationConfig,
+    SplitRatio,
+)
 from synthline_ai.generation.pipeline import run_generation
 from synthline_ai.ingestion.loader import load_seeds
 from synthline_ai.ingestion.quality import check_seed_quality
-from synthline_ai.labeling.export import export_coco
+from synthline_ai.labeling.export import export_coco, export_yolo
 from synthline_ai.validation.checks import validate_results
 from synthline_ai.validation.previews import create_contact_sheet
 from synthline_ai.validation.statistics import compute_statistics
@@ -39,11 +44,17 @@ console = Console()
 @app.command()
 def generate(
     seeds: Path = typer.Option(..., help="Directory of seed images"),
-    defect: str = typer.Option("scratch", help="Defect type to generate"),
+    defect: str = typer.Option("scratch", help="Defect type (scratch, stain, discoloration)"),
     count: int = typer.Option(100, min=1, max=10000, help="Number of images to generate"),
     output: Path = typer.Option(..., help="Output directory"),
     seed: int = typer.Option(42, help="Random seed for reproducibility"),
     severity: float = typer.Option(0.5, min=0.0, max=1.0, help="Defect severity (0.0-1.0)"),
+    frequency: float = typer.Option(1.0, min=0.1, max=5.0, help="Defect frequency/density"),
+    format: str = typer.Option("coco", help="Export format (coco, yolo, all)"),
+    split: bool = typer.Option(False, help="Enable train/val/test dataset partitioning"),
+    train_ratio: float = typer.Option(0.7, min=0.0, max=1.0, help="Train split proportion"),
+    val_ratio: float = typer.Option(0.2, min=0.0, max=1.0, help="Validation split proportion"),
+    test_ratio: float = typer.Option(0.1, min=0.0, max=1.0, help="Test split proportion"),
 ) -> None:
     """Generate synthetic defect images from seed images."""
     start_time = time.time()
@@ -58,6 +69,16 @@ def generate(
         console.print(f"Available types: {[d.value for d in DefectType]}")
         raise typer.Exit(code=1) from None
 
+    # Validate export format
+    try:
+        export_fmt = ExportFormat(format.lower())
+    except ValueError:
+        console.print(f"[red]Error:[/red] Unknown export format '{format}'.")
+        console.print(f"Available formats: {[f.value for f in ExportFormat]}")
+        raise typer.Exit(code=1) from None
+
+    split_config = SplitRatio(train=train_ratio, val=val_ratio, test=test_ratio)
+
     config = GenerationConfig(
         seeds_dir=seeds,
         defect_type=defect_type,
@@ -65,6 +86,10 @@ def generate(
         output_dir=output,
         random_seed=seed,
         severity=severity,
+        frequency=frequency,
+        enable_split=split,
+        split_ratio=split_config,
+        export_format=export_fmt,
     )
 
     # Step 1: Load seeds
@@ -86,7 +111,8 @@ def generate(
         for w in seed_report.warnings:
             console.print(f"             - {w.path.name}: {w.message}")
 
-    console.print(f"[bold]Generator:[/bold] {defect} (severity={severity})")
+    console.print(f"[bold]Generator:[/bold] {defect} (severity={severity}, frequency={frequency})")
+    console.print(f"[bold]Format:[/bold]    {export_fmt.value} (split={'yes' if split else 'no'})")
     console.print(f"[bold]Output:[/bold]    {output}\n")
 
     # Step 3: Generate
@@ -98,14 +124,18 @@ def generate(
         console=console,
     ) as progress:
         task = progress.add_task("Generating", total=count)
-
-        # Run generation (currently synchronous, update progress after)
         results = run_generation(config, arrays, image_infos)
         progress.update(task, completed=count)
 
-    # Step 4: Export COCO
+    # Step 4: Export Datasets
     console.print("\nExporting dataset...")
-    coco_path = export_coco(results, output, config)
+    coco_path: Path | None = None
+    yolo_path: Path | None = None
+
+    if export_fmt in (ExportFormat.COCO, ExportFormat.ALL):
+        coco_path = export_coco(results, output, config)
+    if export_fmt in (ExportFormat.YOLO, ExportFormat.ALL):
+        yolo_path = export_yolo(results, output, config)
 
     # Step 5: Contact sheet
     contact_path = output / "contact-sheet.jpg"
@@ -140,7 +170,11 @@ def generate(
         mean_area = mask_stats.get("mean", 0.0)
         table.add_row("Avg mask area", f"{mean_area:.1f}%")
 
-    table.add_row("COCO annotations", str(coco_path))
+    if coco_path:
+        table.add_row("COCO annotations", str(coco_path))
+    if yolo_path:
+        table.add_row("YOLO data.yaml", str(yolo_path))
+
     table.add_row("Contact sheet", str(contact_path))
     table.add_row("Report", str(report_path))
 
@@ -152,7 +186,6 @@ def generate(
 @app.command()
 def info() -> None:
     """Show version and available generators."""
-    # Import registry to trigger auto-registration
     from synthline_ai.generation.registry import available_generators
 
     console.print(f"\n[bold]SynthLine AI[/bold] v{__version__}")

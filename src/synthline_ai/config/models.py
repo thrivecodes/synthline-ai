@@ -12,6 +12,32 @@ class DefectType(StrEnum):
     """Supported defect generation types."""
 
     SCRATCH = "scratch"
+    STAIN = "stain"
+    DISCOLORATION = "discoloration"
+
+
+class DatasetSplit(StrEnum):
+    """Dataset partition types."""
+
+    TRAIN = "train"
+    VAL = "val"
+    TEST = "test"
+
+
+class ExportFormat(StrEnum):
+    """Supported dataset export formats."""
+
+    COCO = "coco"
+    YOLO = "yolo"
+    ALL = "all"
+
+
+class SplitRatio(BaseModel):
+    """Train/Val/Test partitioning ratios."""
+
+    train: float = Field(default=0.7, ge=0.0, le=1.0)
+    val: float = Field(default=0.2, ge=0.0, le=1.0)
+    test: float = Field(default=0.1, ge=0.0, le=1.0)
 
 
 class GenerationConfig(BaseModel):
@@ -23,6 +49,10 @@ class GenerationConfig(BaseModel):
     output_dir: Path
     random_seed: int = Field(default=42)
     severity: float = Field(default=0.5, ge=0.0, le=1.0)
+    frequency: float = Field(default=1.0, ge=0.1, le=5.0)  # defect density / occurrences
+    enable_split: bool = Field(default=False)
+    split_ratio: SplitRatio = Field(default_factory=SplitRatio)
+    export_format: ExportFormat = ExportFormat.COCO
 
 
 class ImageInfo(BaseModel):
