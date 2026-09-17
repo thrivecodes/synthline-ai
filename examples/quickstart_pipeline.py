@@ -10,7 +10,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from examples.generate_sample_seeds import generate_brushed_metal  # noqa: E402
-
 from synthline_ai.config.models import (  # noqa: E402
     DefectType,
     ExportFormat,

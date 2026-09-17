@@ -87,16 +87,16 @@ def extract_features(images: list[np.ndarray], masks: list[np.ndarray]) -> np.nd
                 boundary_mask = cv2.morphologyEx(mask_uint8, cv2.MORPH_GRADIENT, kernel) > 0
 
                 if boundary_mask.any():
-                    grad_mag_boundary = np.mean(mag[boundary_mask])
+                    grad_mag_boundary = float(np.mean(mag[boundary_mask]))
             except Exception:
                 pass
 
         # 6. Contrast between defect and background (1)
         contrast = 0.0
         if is_defect.any() and is_bg.any():
-            defect_gray_mean = np.mean(defect_mean)
-            bg_gray_mean = np.mean(bg_mean)
-            contrast = abs(defect_gray_mean - bg_gray_mean)
+            defect_gray_mean = float(np.mean(defect_mean))
+            bg_gray_mean = float(np.mean(bg_mean))
+            contrast = float(abs(defect_gray_mean - bg_gray_mean))
 
         feat = np.concatenate(
             [
