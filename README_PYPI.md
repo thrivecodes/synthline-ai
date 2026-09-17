@@ -33,13 +33,34 @@
 
 ## Installation
 
-### Standard Installation
+### Using `uv` (Recommended — 10-100x Faster)
 ```bash
-pip install synthline-ai
+# Direct install
+uv pip install synthline-ai
+
+# Or add to your uv project
+uv add synthline-ai
+
+# With Sim-to-Real probe model evaluation
+uv add "synthline-ai[probe]"
 ```
 
-### With Sim-to-Real Probe Evaluation
+### Zero-Install Instant Execution (`uvx`)
+Run SynthLine AI directly without installing into your local Python environment:
 ```bash
+# Launch interactive local studio UI immediately
+uvx synthline-ai ui
+
+# Run benchmark suite instantly
+uvx synthline-ai benchmark
+```
+
+### Using Standard `pip`
+```bash
+# Standard installation
+pip install synthline-ai
+
+# With Sim-to-Real probe evaluation
 pip install "synthline-ai[probe]"
 ```
 
