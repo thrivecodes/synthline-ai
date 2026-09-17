@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-09-17
+
+### Added
+- **Procedural Crack Generator (`generation/procedural/crack.py`)**:
+  - Dendritic step-wise fracture paths with tortuous main fissures and randomized branching sub-cracks.
+  - Dark shadow core profile with subtle outer stress halos simulating brittle fracture.
+- **Procedural Pinhole & Void Generator (`generation/procedural/pinhole.py`)**:
+  - Porosity voids, welding blowholes, and coating pinholes arranged in natural Poisson-like clusters.
+  - Realistic depth shading with dark crater cores and bright rim highlights.
+- **Procedural Dent & Impression Generator (`generation/procedural/dent.py`)**:
+  - 3D surface impressions and sheet-metal dents with directional lighting shading.
+  - Accurate crest specular highlights facing illumination source and trough shadow occlusion opposite the light.
+- **Industrial Camera & Optical Sensor Noise (`generation/randomization/sensor.py`)**:
+  - Coupled Poisson shot noise and Gaussian thermal read noise.
+  - Chromatic aberration simulating lateral dispersion across RGB channels.
+  - High-speed conveyor motion blur and optical lens defocusing.
+- **Balanced Multi-Class Dataset Generation (`DefectType.MIXED`)**:
+  - Generate balanced multi-class visual inspection datasets across all 6 defect families in a single run.
+  - Dynamic COCO multi-category registration and YOLO multi-class label mappings.
+- **Multi-Defect Compound Mode (`compound_defects` & `defects_per_image`)**:
+  - Sequential multi-defect generation on the same workpiece (e.g. scratch + stain, crack + pinholes).
+  - Multi-instance COCO segmentation exports (multiple annotation entries per image).
+  - Multi-bounding box YOLO exports (multiple class lines per label text file).
+- **Baseline Comparison Engine & Probe Baselines (`validation/baseline_comparison.py`)**:
+  - `compare_synthetic_vs_real_baselines`: Train probe models on synthetic data, real data, and combined data to compute sim-to-real gap, augmentation gain, and statistical parity.
+  - `synthline-ai probe --compare-baselines`: Direct CLI comparison command.
+- **Benchmark Suite & Runner (`benchmarks/`)**:
+  - `synthline-ai benchmark`: Built-in throughput benchmark evaluating generator speed (images/sec) and probe quality across all defect types.
+- **Expanded Local Web Studio UI**:
+  - Interactive tabs: Seeds, Generate, Runs, and System Health.
+  - Direct seed image thumbnail gallery, seed deletion, and real-time upload status.
+  - Defect cards for all 6 defect classes + mixed mode.
+  - Sliders and toggles for compound multi-defect mode, defects per image, camera sensor noise, and affine geometric jitter.
+
 ## [0.1.0] - 2026-09-17
 
 ### Added

@@ -8,6 +8,7 @@ from typing import Any
 import cv2
 import numpy as np
 
+from synthline_ai import __version__
 from synthline_ai.config.models import GenerationConfig
 from synthline_ai.generation.base import GenerationResult
 from synthline_ai.labeling.boxes import mask_to_bbox, mask_to_yolo_bbox
@@ -35,7 +36,7 @@ def export_coco(
     coco_data: dict[str, Any] = {
         "info": {
             "description": "SynthLine AI generated dataset",
-            "version": "0.1.0",
+            "version": __version__,
             "date_created": datetime.now(UTC).isoformat(),
         },
         "images": [],
