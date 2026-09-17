@@ -45,10 +45,59 @@ def test_cli_generate_e2e(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert (output_dir / "annotations.coco.json").exists()
     assert (output_dir / "contact-sheet.jpg").exists()
+    assert (output_dir / "preview.html").exists()
     assert (output_dir / "report.json").exists()
     assert (output_dir / "metadata.jsonl").exists()
     assert len(list((output_dir / "images").glob("*.png"))) == 5
     assert len(list((output_dir / "masks").glob("*.png"))) == 5
+
+
+def test_cli_export(tmp_path: Path) -> None:
+    # First generate a run
+    seeds_dir = tmp_path / "seeds"
+    seeds_dir.mkdir()
+    for i in range(2):
+        img = np.full((64, 64, 3), 150, dtype=np.uint8)
+        cv2.imwrite(str(seeds_dir / f"seed_{i}.png"), img)
+
+    run_dir = tmp_path / "run_source"
+    res_gen = runner.invoke(
+        app,
+        ["generate", "--seeds", str(seeds_dir), "--count", "2", "--output", str(run_dir)],
+    )
+    assert res_gen.exit_code == 0
+
+    # Now test export command
+    export_dir = tmp_path / "run_exported_yolo"
+    res_exp = runner.invoke(
+        app,
+        ["export", "--run", str(run_dir), "--format", "yolo", "--output", str(export_dir)],
+    )
+    assert res_exp.exit_code == 0
+    assert (export_dir / "yolo" / "data.yaml").exists()
+    assert (export_dir / "contact-sheet.jpg").exists()
+    assert (export_dir / "preview.html").exists()
+
+
+def test_cli_probe(tmp_path: Path) -> None:
+    seeds_dir = tmp_path / "seeds"
+    seeds_dir.mkdir()
+    img = np.full((64, 64, 3), 140, dtype=np.uint8)
+    cv2.imwrite(str(seeds_dir / "seed.png"), img)
+
+    run_dir = tmp_path / "run_for_probe"
+    res_gen = runner.invoke(
+        app,
+        ["generate", "--seeds", str(seeds_dir), "--count", "3", "--output", str(run_dir)],
+    )
+    assert res_gen.exit_code == 0
+
+    res_probe = runner.invoke(
+        app,
+        ["probe", "--run-dir", str(run_dir)],
+    )
+    assert res_probe.exit_code == 0
+    assert (run_dir / "probe-report.json").exists()
 
 
 def test_cli_generate_yolo_and_split(tmp_path: Path) -> None:

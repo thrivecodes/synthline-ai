@@ -7,7 +7,31 @@ name = "synthline-ai"
 version = "0.1.0"
 description = "Synthetic visual-data generation for computer-vision teams."
 readme = "README.md"
-license = "LicenseRef-Proprietary"
+license = { text = "Apache-2.0" }
+authors = [{ name = "SynthLine AI Team", email = "hello@synthline.ai" }]
+keywords = [
+    "synthetic-data",
+    "computer-vision",
+    "defect-detection",
+    "dataset-generator",
+    "coco",
+    "yolo",
+    "machine-vision",
+    "data-augmentation",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Processing",
+]
 requires-python = ">=3.11"
 dependencies = [
     "numpy>=1.24",
@@ -21,6 +45,12 @@ dependencies = [
     "uvicorn>=0.20.0",
     "python-multipart>=0.0.6",
 ]
+
+[project.urls]
+Homepage = "https://github.com/thrivecodes/synthline-ai"
+Repository = "https://github.com/thrivecodes/synthline-ai.git"
+Issues = "https://github.com/thrivecodes/synthline-ai/issues"
+Changelog = "https://github.com/thrivecodes/synthline-ai/blob/main/CHANGELOG.md"
 
 
 [project.optional-dependencies]

@@ -5,9 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0] - 2026-09-17
 
 ### Added
+- **Production Packaging & PyPI Release Readiness**:
+  - Full PyPI specification with standard metadata, Trove classifiers, Apache-2.0 license, and project URLs.
+  - Sdist and wheel distribution packages verified clean by `twine check`.
+- **Standalone Dataset Exporter (`synthline-ai export`)**:
+  - CLI command converting existing generation runs into COCO JSON, YOLO format (`data.yaml`), or both, without re-executing generation.
+  - Automatic mask resolution supporting both direct and prefixed naming conventions.
+- **Interactive HTML Visual Inspector (`preview.html`)**:
+  - Self-contained, responsive dataset inspection gallery generated with each run.
+  - Interactive mode toggles (Generated Image vs. Mask Overlay), split filtering (Train, Val, Test), and defect metric badges.
+- **Curated Benchmarks & Example Utilities**:
+  - `examples/generate_sample_seeds.py`: Pure procedural generators for realistic industrial surfaces (brushed metal, polished ceramic, matte polymer).
+  - `examples/quickstart_pipeline.py`: Complete zero-mock Python API demonstration from seed loading to export and evaluation.
+  - `benchmarks/benchmark_sim2real.py`: Reproducible throughput and probe-model sim-to-real evaluation suite.
 - **Phase 4 Validation & Proof, Probe Models & Defect Variability**:
   - `validation/probe_models.py`: 16-feature computer vision extraction pipeline, lightweight gradient boosting probe classifier measuring sim-to-real performance gap against real held-out inspection samples, and dataset feature diversity/variance scoring.
   - `generation/procedural/variability.py`: `apply_defect_variability` applying per-defect HSV color shifts, opacity jitter, and morphological boundary roughness.

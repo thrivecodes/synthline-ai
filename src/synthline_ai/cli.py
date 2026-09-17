@@ -34,6 +34,7 @@ from synthline_ai.validation.checks import (
     check_split_leakage,
     validate_results,
 )
+from synthline_ai.validation.html_preview import generate_html_preview
 from synthline_ai.validation.previews import create_contact_sheet
 from synthline_ai.validation.statistics import compute_split_statistics, compute_statistics
 
@@ -150,9 +151,12 @@ def generate(
     if export_fmt in (ExportFormat.YOLO, ExportFormat.ALL):
         yolo_path = export_yolo(results, output, config)
 
-    # Step 5: Contact sheet
+    # Step 5: Contact sheet & Interactive HTML preview
     contact_path = output / "contact-sheet.jpg"
     create_contact_sheet(results, contact_path, max_samples=16)
+    html_preview_path = output / "preview.html"
+    title = f"SynthLine AI — {defect.capitalize()} Dataset"
+    generate_html_preview(results, html_preview_path, title=title)
 
     # Step 6: Statistics and validation
     stats = compute_statistics(results)
@@ -209,6 +213,7 @@ def generate(
         table.add_row("Brightness outliers", f"[yellow]{outlier_count}[/yellow]")
 
     table.add_row("Contact sheet", str(contact_path))
+    table.add_row("HTML preview", str(html_preview_path))
     table.add_row("Report", str(report_path))
 
     console.print("\n[bold green]Results:[/bold green]")
@@ -332,6 +337,143 @@ def probe(
     with open(probe_report_path, "w") as f:
         json.dump(metrics, f, indent=2, default=str)
     console.print(f"\n[dim]Report saved to {probe_report_path}[/dim]\n")
+
+
+@app.command()
+def export(
+    run: Path = typer.Option(..., help="Path to an existing generation run directory"),
+    format: str = typer.Option("coco", help="Export format (coco, yolo, all)"),
+    output: Path = typer.Option(..., help="Target directory for the exported dataset"),
+) -> None:
+    """Export an existing generation run into standard dataset formats."""
+    import cv2
+
+    from synthline_ai.generation.base import GenerationResult
+
+    console.print(f"\n[bold]SynthLine AI[/bold] Export v{__version__}\n")
+
+    try:
+        export_fmt = ExportFormat(format.lower())
+    except ValueError:
+        console.print(f"[red]Error:[/red] Unknown export format '{format}'.")
+        console.print(f"Available formats: {[f.value for f in ExportFormat]}")
+        raise typer.Exit(code=1) from None
+
+    images_dir = run / "images"
+    masks_dir = run / "masks"
+    if not images_dir.exists() or not masks_dir.exists():
+        console.print(
+            "[red]Error:[/red] Run directory must contain 'images/' and 'masks/' folders."
+        )
+        raise typer.Exit(code=1)
+
+    # Load metadata if present
+    meta_by_name: dict[str, dict[str, object]] = {}
+    meta_path = run / "metadata.jsonl"
+    if meta_path.exists():
+        try:
+            with open(meta_path, encoding="utf-8") as f:
+                for line in f:
+                    item = json.loads(line.strip())
+                    img_name = str(item.get("image", ""))
+                    if img_name:
+                        meta_by_name[img_name] = item
+        except Exception:
+            pass
+
+    # Load config if present
+    config_path = run / "config.json"
+    if config_path.exists():
+        try:
+            with open(config_path, encoding="utf-8") as f:
+                config_data = json.load(f)
+                config = GenerationConfig.model_validate(config_data)
+                config.output_dir = output
+                config.export_format = export_fmt
+        except Exception:
+            config = GenerationConfig(
+                seeds_dir=run,
+                output_dir=output,
+                export_format=export_fmt,
+            )
+    else:
+        config = GenerationConfig(
+            seeds_dir=run,
+            output_dir=output,
+            export_format=export_fmt,
+        )
+
+    results: list[GenerationResult] = []
+    for img_file in sorted(images_dir.iterdir()):
+        if img_file.suffix.lower() not in {".png", ".jpg", ".jpeg", ".bmp"}:
+            continue
+        mask_candidates = [
+            masks_dir / img_file.name,
+            masks_dir / img_file.name.replace("image_", "mask_", 1),
+        ]
+        mask_file = next((p for p in mask_candidates if p.exists()), None)
+        if mask_file is None:
+            continue
+
+        img = cv2.imread(str(img_file))
+        mask = cv2.imread(str(mask_file), cv2.IMREAD_GRAYSCALE)
+        if img is None or mask is None:
+            continue
+
+        item_meta = meta_by_name.get(img_file.name, {})
+        defect_type_val = str(item_meta.get("defect_type", config.defect_type.value))
+        source_seed_val = str(item_meta.get("source_seed", "unknown"))
+        split_val = str(item_meta.get("split", "train"))
+        rnd_val = item_meta.get("random_seed", 0)
+        rnd_seed_val = rnd_val if isinstance(rnd_val, int) else 0
+
+        results.append(
+            GenerationResult(
+                image=img,
+                mask=mask,
+                source_seed=source_seed_val,
+                defect_type=defect_type_val,
+                random_seed=rnd_seed_val,
+                split=split_val,
+                metadata=item_meta,
+            )
+        )
+
+    if not results:
+        console.print("[red]Error:[/red] No valid image-mask pairs found to export.")
+        raise typer.Exit(code=1)
+
+    console.print(f"Loaded [bold]{len(results)}[/bold] images from {run}")
+    console.print(f"Exporting to format: [bold]{export_fmt.value}[/bold] -> {output}\n")
+
+    coco_path = None
+    yolo_path = None
+    if export_fmt in (ExportFormat.COCO, ExportFormat.ALL):
+        coco_path = export_coco(results, output, config)
+    if export_fmt in (ExportFormat.YOLO, ExportFormat.ALL):
+        yolo_path = export_yolo(results, output, config)
+
+    # Contact sheet and HTML preview
+    contact_path = output / "contact-sheet.jpg"
+    create_contact_sheet(results, contact_path, max_samples=16)
+    html_preview_path = output / "preview.html"
+    export_title = f"SynthLine AI — {export_fmt.value.upper()} Export"
+    generate_html_preview(results, html_preview_path, title=export_title)
+
+    table = Table(show_header=False, box=None, padding=(0, 2))
+    table.add_column("Key", style="bold")
+    table.add_column("Value")
+    table.add_row("Exported items", str(len(results)))
+    if coco_path:
+        table.add_row("COCO annotations", str(coco_path))
+    if yolo_path:
+        table.add_row("YOLO data.yaml", str(yolo_path))
+    table.add_row("Contact sheet", str(contact_path))
+    table.add_row("HTML preview", str(html_preview_path))
+
+    console.print("[bold green]Export Complete:[/bold green]")
+    console.print(table)
+    console.print()
 
 
 if __name__ == "__main__":

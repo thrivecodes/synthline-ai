@@ -1,0 +1,70 @@
+{
+  "timestamp": "2026-09-17 11:17:36Z",
+  "throughput": {
+    "scratch": {
+      "count": 30,
+      "elapsed_seconds": 1.45,
+      "images_per_second": 20.7
+    },
+    "stain": {
+      "count": 30,
+      "elapsed_seconds": 1.949,
+      "images_per_second": 15.4
+    },
+    "discoloration": {
+      "count": 30,
+      "elapsed_seconds": 2.111,
+      "images_per_second": 14.2
+    }
+  },
+  "probe_benchmark": {
+    "feature_diversity": 24.45661502423898,
+    "intra_class_variance": 8.366228527912142,
+    "synthetic_cv_accuracy": 1.0,
+    "real_precision": 1.0,
+    "real_recall": 1.0,
+    "real_f1": 1.0,
+    "real_accuracy": 1.0,
+    "feature_importances": {
+      "defect_r_mean": 0.25784838528347237,
+      "defect_g_mean": 0.05301030662922954,
+      "defect_b_mean": 0.0007074277503984311,
+      "defect_r_std": 0.002119339705911659,
+      "defect_g_std": 0.10907355228880203,
+      "defect_b_std": 0.06274215166826656,
+      "bg_r_mean": 0.0,
+      "bg_g_mean": 0.0,
+      "bg_b_mean": 0.0,
+      "bg_r_std": 0.0,
+      "bg_g_std": 0.0,
+      "bg_b_std": 0.0,
+      "area_ratio": 0.01607187420927323,
+      "aspect_ratio": 0.37825112761268365,
+      "grad_mag_boundary": 0.021695288865931864,
+      "contrast": 0.09848054598603054
+    },
+    "sim_to_real_gap": 0.0,
+    "model_params": {
+      "ccp_alpha": 0.0,
+      "criterion": "deprecated",
+      "init": null,
+      "learning_rate": 0.1,
+      "loss": "log_loss",
+      "max_depth": 3,
+      "max_features": null,
+      "max_leaf_nodes": null,
+      "min_impurity_decrease": 0.0,
+      "min_samples_leaf": 1,
+      "min_samples_split": 2,
+      "min_weight_fraction_leaf": 0.0,
+      "n_estimators": 50,
+      "n_iter_no_change": null,
+      "random_state": 42,
+      "subsample": 1.0,
+      "tol": 0.0001,
+      "validation_fraction": 0.1,
+      "verbose": 0,
+      "warm_start": false
+    }
+  }
+}
