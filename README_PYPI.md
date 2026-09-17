@@ -64,6 +64,20 @@ pip install synthline-ai
 pip install "synthline-ai[probe]"
 ```
 
+### Using Docker Container
+Pre-built OCI container images are available on GitHub Container Registry (GHCR):
+```bash
+# Launch interactive Studio UI with persistent local data volume
+docker run -d -p 8000:8000 -v $(pwd)/data:/data ghcr.io/thrivecodes/synthline-ai:latest
+
+# Or launch with Docker Compose
+docker compose up -d
+
+# Or execute CLI generation inside the container
+docker run --rm -v $(pwd)/data:/data ghcr.io/thrivecodes/synthline-ai:latest \
+  generate --seeds /data/seeds --defect scratch --count 100 --output /data/output
+```
+
 ---
 
 ## Quickstart CLI

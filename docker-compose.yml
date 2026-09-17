@@ -1,0 +1,19 @@
+services:
+  synthline-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/thrivecodes/synthline-ai:latest
+    container_name: synthline-ai
+    ports:
+      - "8000:8000"
+    volumes:
+      - synthline_data:/data
+    restart: unless-stopped
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+
+volumes:
+  synthline_data:
+    driver: local
