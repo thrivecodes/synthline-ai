@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "synthline-ai"
+version = "0.1.0"
+description = "Synthetic visual-data generation for computer-vision teams."
+readme = "README.md"
+license = "LicenseRef-Proprietary"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.24",
+    "opencv-python-headless>=4.8",
+    "Pillow>=10.0",
+    "scikit-image>=0.21",
+    "pydantic>=2.0",
+    "typer[all]>=0.9",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "ruff>=0.1",
+    "mypy>=1.5",
+]
+
+[project.scripts]
+synthline-ai = "synthline_ai.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/synthline_ai"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["B008"]  # Allow typer.Option in CLI default arguments
+
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+ignore_missing_imports = true
+

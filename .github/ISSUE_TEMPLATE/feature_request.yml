@@ -1,0 +1,42 @@
+name: Feature Request / Defect Generator Proposal
+description: Suggest an idea, defect generator, or workflow enhancement for SynthLine AI
+title: "[FEATURE] <title>"
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We welcome feature suggestions and ideas for new defect generation algorithms!
+  - type: textarea
+    id: problem
+    attributes:
+      label: Is your feature request related to a problem? Please describe.
+      description: A clear and concise description of the motivation (e.g. need realistic paint bubble defects).
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Describe the Solution / Feature
+      description: Clear description of the proposed functionality, defect generation behavior, or export capability.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions or workarounds you've considered.
+  - type: dropdown
+    id: category
+    attributes:
+      label: Area / Category
+      options:
+        - Procedural Generator (Defect type)
+        - Ingestion & QA Checks
+        - Labeling & Masks
+        - Dataset Export (COCO, YOLO, etc.)
+        - Validation & Statistics
+        - CLI & Developer Experience
+        - Web / API Interface
+    validations:
+      required: true

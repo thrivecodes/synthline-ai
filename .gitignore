@@ -1,0 +1,128 @@
+# ==============================================================================
+# Comprehensive .gitignore for SynthLine AI (Python / Computer Vision / ML)
+# ==============================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.dylib
+*.dll
+
+# C extensions
+*.obj
+*.o
+*.a
+*.lib
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+.conda/
+conda-env/
+
+# Installer logs & pip cache
+pip-log.txt
+pip-delete-this-directory.txt
+.pip-cache/
+
+# Unit test / coverage reporting
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Type checking / Linters
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# IDE & Editors
+.vscode/
+!.vscode/settings.json.example
+!.vscode/launch.json.example
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+*.sublime-project
+.project
+.pydevproject
+.settings/
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.crt
+secrets.yaml
+secrets.json
+
+# SynthLine AI local run artifacts, seed caches & dataset outputs
+runs/
+exports/
+data/
+datasets/
+output/
+outputs/
+*.coco.json.bak
+*.yolo.bak
+benchmark_results/
+wandb/
+.tensorboard/

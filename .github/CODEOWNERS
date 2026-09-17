@@ -1,0 +1,20 @@
+# ==============================================================================
+# GitHub CODEOWNERS for SynthLine AI
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# ==============================================================================
+
+# Global owner for all files across the repository
+* @thrive-spectrexq
+
+# Core package code and algorithms
+/src/ @thrive-spectrexq
+
+# CI/CD Workflows, GitHub actions & community health files
+/.github/ @thrive-spectrexq
+
+# Build & packaging configs
+/pyproject.toml @thrive-spectrexq
+/.gitignore @thrive-spectrexq
+
+# Testing suite
+/tests/ @thrive-spectrexq
