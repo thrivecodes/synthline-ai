@@ -714,6 +714,27 @@
           ` : ''}
 
           <form onsubmit="handleGenerate(event)">
+            <div style="background: var(--color-bg); border: 1px solid var(--color-border); padding: 0.85rem 1rem; border-radius: 6px; margin-bottom: 1.25rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                <label style="font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin: 0;">
+                  🏭 Industry Domain Preset
+                </label>
+                <span id="preset-badge" style="font-size: 0.72rem; padding: 0.15rem 0.5rem; border-radius: 10px; background: var(--color-border); color: var(--color-text-muted);">Custom</span>
+              </div>
+              <select id="gen-preset" class="form-control" onchange="applyPresetToForm(this.value)">
+                <option value="">-- Custom Manual Configuration --</option>
+                <option value="automotive_stamping">🚗 Automotive Sheet Metal Stamping (Mixed, Compound, Auto ROI)</option>
+                <option value="semiconductor_wafer">🔬 Semiconductor Wafer Inspection (Cleanroom Microcracks, Auto ROI)</option>
+                <option value="pcb_electronics">⚡ PCB & SMT Surface Mount (Hairline Cracks, Flux Stains, Compound)</option>
+                <option value="pharmaceutical_packaging">💊 Pharmaceutical Packaging & Blister Seals (Pinholes, Compound)</option>
+                <option value="textile_fabric">🧵 Textile & Woven Fabric Inspection (High-Density Texture, Abrasions)</option>
+                <option value="glass_optics">🔍 Glass & Optical Components (Scratches, Pits, Refraction, ROI)</option>
+              </select>
+              <div id="preset-desc" style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.4rem; font-style: italic;">
+                Select an industry preset to automatically populate optimal defect models, ROI constraints, severity, and variation parameters.
+              </div>
+            </div>
+
             <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;">
               Select Defect Type
             </label>
@@ -1027,6 +1048,207 @@
       const activeCard = document.getElementById(`card-${defect}`);
       if (activeCard) activeCard.classList.add('active');
       document.getElementById('gen-defect').value = defect;
+    }
+
+    const INDUSTRY_PRESETS = {
+      automotive_stamping: {
+        defect: 'mixed',
+        severity: 0.65,
+        frequency: 1.2,
+        compound: true,
+        defectsPerImage: 2,
+        autoRoi: true,
+        sensor: 0.12,
+        geometry: 0.25,
+        lighting: 0.35,
+        texture: 0.15,
+        format: 'all',
+        split: true,
+        badge: 'Automotive QA',
+        desc: 'Die-forming scratches, tool abrasions, and sheet-metal dents with directional illumination highlights and workpiece boundary containment.'
+      },
+      semiconductor_wafer: {
+        defect: 'mixed',
+        severity: 0.40,
+        frequency: 0.8,
+        compound: false,
+        defectsPerImage: 1,
+        autoRoi: true,
+        sensor: 0.18,
+        geometry: 0.10,
+        lighting: 0.10,
+        texture: 0.10,
+        format: 'all',
+        split: true,
+        badge: 'Semiconductor Cleanroom',
+        desc: 'Micro-fracture cracks, etching pinholes, and chemical vapor discoloration rings simulating cleanroom optical inspection.'
+      },
+      pcb_electronics: {
+        defect: 'mixed',
+        severity: 0.50,
+        frequency: 1.0,
+        compound: true,
+        defectsPerImage: 2,
+        autoRoi: true,
+        sensor: 0.12,
+        geometry: 0.15,
+        lighting: 0.20,
+        texture: 0.15,
+        format: 'all',
+        split: true,
+        badge: 'Electronics & SMT',
+        desc: 'Hairline trace cracks, solder voids, and chemical flux staining on electronic substrates with multi-defect compound presence.'
+      },
+      pharmaceutical_packaging: {
+        defect: 'mixed',
+        severity: 0.55,
+        frequency: 0.9,
+        compound: true,
+        defectsPerImage: 2,
+        autoRoi: true,
+        sensor: 0.10,
+        geometry: 0.20,
+        lighting: 0.25,
+        texture: 0.10,
+        format: 'all',
+        split: true,
+        badge: 'Pharma Packaging',
+        desc: 'Blister foil pinholes, crimping stress cracks, and fluid residue contamination for sterile pharmaceutical container inspection.'
+      },
+      textile_fabric: {
+        defect: 'mixed',
+        severity: 0.60,
+        frequency: 1.5,
+        compound: false,
+        defectsPerImage: 1,
+        autoRoi: false,
+        sensor: 0.10,
+        geometry: 0.25,
+        lighting: 0.20,
+        texture: 0.40,
+        format: 'all',
+        split: true,
+        badge: 'Textile Inspection',
+        desc: 'Yarn abrasions, oil droplet stains, and localized dye discoloration patches across high-frequency woven textures.'
+      },
+      glass_optics: {
+        defect: 'mixed',
+        severity: 0.45,
+        frequency: 0.8,
+        compound: true,
+        defectsPerImage: 2,
+        autoRoi: true,
+        sensor: 0.15,
+        geometry: 0.15,
+        lighting: 0.30,
+        texture: 0.08,
+        format: 'all',
+        split: true,
+        badge: 'Precision Optics',
+        desc: 'Surface scratches, micro-pits, edge chipping, and specular refraction anomalies on transparent and optical glass substrates.'
+      }
+    };
+
+    function applyPresetToForm(slug) {
+      const badgeEl = document.getElementById('preset-badge');
+      const descEl = document.getElementById('preset-desc');
+      if (!slug || !INDUSTRY_PRESETS[slug]) {
+        if (badgeEl) {
+          badgeEl.innerText = 'Custom';
+          badgeEl.style.background = 'var(--color-border)';
+          badgeEl.style.color = 'var(--color-text-muted)';
+        }
+        if (descEl) {
+          descEl.innerText = 'Select an industry preset to automatically populate optimal defect models, ROI constraints, severity, and variation parameters.';
+        }
+        return;
+      }
+
+      const p = INDUSTRY_PRESETS[slug];
+      if (badgeEl) {
+        badgeEl.innerText = p.badge;
+        badgeEl.style.background = '#e8f8f5';
+        badgeEl.style.color = '#117a65';
+      }
+      if (descEl) {
+        descEl.innerText = p.desc;
+      }
+
+      selectDefectCard(p.defect);
+
+      const sevInput = document.getElementById('gen-severity');
+      if (sevInput) {
+        sevInput.value = p.severity;
+        const sEl = document.getElementById('val-severity');
+        if (sEl) sEl.innerText = p.severity.toFixed(2);
+      }
+
+      const freqInput = document.getElementById('gen-frequency');
+      if (freqInput) {
+        freqInput.value = p.frequency;
+        const fEl = document.getElementById('val-freq');
+        if (fEl) fEl.innerText = p.frequency.toFixed(1);
+      }
+
+      const compSelect = document.getElementById('gen-compound');
+      if (compSelect) {
+        compSelect.value = p.compound ? 'true' : 'false';
+        const cEl = document.getElementById('val-compound-status');
+        if (cEl) cEl.innerText = p.compound ? 'Active' : 'Disabled';
+        const box = document.getElementById('defects-per-img-box');
+        if (box) box.style.display = p.compound ? 'block' : 'none';
+      }
+      const defectsInput = document.getElementById('gen-defects-per-image');
+      if (defectsInput) {
+        defectsInput.value = p.defectsPerImage;
+        const lbl = document.getElementById('val-defects-per-image');
+        if (lbl) lbl.innerText = p.defectsPerImage;
+      }
+
+      const roiSelect = document.getElementById('gen-auto-roi');
+      if (roiSelect) {
+        roiSelect.value = p.autoRoi ? 'true' : 'false';
+        const roiLbl = document.getElementById('val-roi-status');
+        if (roiLbl) roiLbl.innerText = p.autoRoi ? 'Enforced' : 'Disabled';
+      }
+
+      const sensorInput = document.getElementById('gen-sensor');
+      if (sensorInput) {
+        sensorInput.value = p.sensor;
+        const sLbl = document.getElementById('val-sensor');
+        if (sLbl) sLbl.innerText = p.sensor.toFixed(2);
+      }
+
+      const geomInput = document.getElementById('gen-geometry');
+      if (geomInput) {
+        geomInput.value = p.geometry;
+        const gLbl = document.getElementById('val-geometry');
+        if (gLbl) gLbl.innerText = p.geometry.toFixed(2);
+      }
+
+      const lightInput = document.getElementById('gen-lighting');
+      if (lightInput) {
+        lightInput.value = p.lighting;
+        const lLbl = document.getElementById('val-lighting');
+        if (lLbl) lLbl.innerText = p.lighting.toFixed(2);
+      }
+
+      const textInput = document.getElementById('gen-texture');
+      if (textInput) {
+        textInput.value = p.texture;
+        const tLbl = document.getElementById('val-texture');
+        if (tLbl) tLbl.innerText = p.texture.toFixed(2);
+      }
+
+      const splitSelect = document.getElementById('gen-split');
+      if (splitSelect) {
+        splitSelect.value = p.split ? 'true' : 'false';
+      }
+
+      const fmtSelect = document.getElementById('gen-format');
+      if (fmtSelect) {
+        fmtSelect.value = p.format;
+      }
     }
 
     function initTabInteractions() {

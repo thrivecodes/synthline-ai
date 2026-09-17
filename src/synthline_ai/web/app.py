@@ -20,6 +20,7 @@ from synthline_ai.projects.models import (
     Run,
     RunCreate,
 )
+from synthline_ai.recipes.presets import list_presets
 
 app = FastAPI(
     title="SynthLine AI",
@@ -50,6 +51,12 @@ def get_info() -> dict[str, object]:
         "version": __version__,
         "generators": available_generators(),
     }
+
+
+@app.get("/api/recipes")
+def list_recipes_endpoint() -> list[dict[str, object]]:
+    """Retrieve pre-configured industry domain recipes and parameters."""
+    return [r.model_dump() for r in list_presets()]
 
 
 @app.get("/api/projects", response_model=list[Project])

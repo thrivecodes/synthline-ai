@@ -191,3 +191,90 @@ def test_cli_benchmark_execution(tmp_path: Path) -> None:
     )
     assert result.exit_code == 0
     assert (bench_dir / "benchmark_report.json").exists()
+
+
+def test_cli_recipe_list() -> None:
+    result = runner.invoke(app, ["recipe", "list"])
+    assert result.exit_code == 0
+    assert "automotive_stamping" in result.output
+    assert "semiconductor_wafer" in result.output
+    assert "pcb_electronics" in result.output
+
+
+def test_cli_recipe_inspect() -> None:
+    result = runner.invoke(app, ["recipe", "inspect", "automotive_stamping"])
+    assert result.exit_code == 0
+    assert "Automotive Sheet Metal Stamping" in result.output
+    assert "automotive" in result.output
+    assert "Severity" in result.output
+
+
+def test_cli_recipe_export_and_inspect_file(tmp_path: Path) -> None:
+    out_file = tmp_path / "custom_recipe.json"
+    res_exp = runner.invoke(
+        app,
+        ["recipe", "export", "pcb_electronics", "--output", str(out_file)],
+    )
+    assert res_exp.exit_code == 0
+    assert out_file.exists()
+
+    res_insp = runner.invoke(app, ["recipe", "inspect", str(out_file)])
+    assert res_insp.exit_code == 0
+    assert "PCB & SMT Surface Mount" in res_insp.output
+
+
+def test_cli_generate_with_preset(tmp_path: Path) -> None:
+    seeds_dir = tmp_path / "seeds"
+    seeds_dir.mkdir()
+    for i in range(2):
+        img = np.full((64, 64, 3), 130 + i * 20, dtype=np.uint8)
+        cv2.imwrite(str(seeds_dir / f"seed_{i}.png"), img)
+
+    out_dir = tmp_path / "preset_gen_out"
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "--seeds",
+            str(seeds_dir),
+            "--preset",
+            "automotive_stamping",
+            "--count",
+            "2",
+            "--output",
+            str(out_dir),
+            "--seed",
+            "42",
+        ],
+    )
+    assert result.exit_code == 0
+    assert (out_dir / "annotations.coco.json").exists()
+    assert (out_dir / "report.json").exists()
+
+
+def test_cli_dataset_merge(tmp_path: Path) -> None:
+    seeds_dir = tmp_path / "seeds"
+    seeds_dir.mkdir()
+    img = np.full((64, 64, 3), 150, dtype=np.uint8)
+    cv2.imwrite(str(seeds_dir / "seed.png"), img)
+
+    run1 = tmp_path / "run_1"
+    run2 = tmp_path / "run_2"
+    runner.invoke(
+        app,
+        ["generate", "--seeds", str(seeds_dir), "--count", "2", "--output", str(run1)],
+    )
+    runner.invoke(
+        app,
+        ["generate", "--seeds", str(seeds_dir), "--count", "2", "--output", str(run2)],
+    )
+
+    fused_out = tmp_path / "fused_out"
+    result = runner.invoke(
+        app,
+        ["dataset", "merge", str(run1), str(run2), "--output", str(fused_out)],
+    )
+    assert result.exit_code == 0
+    assert (fused_out / "annotations.coco.json").exists()
+    assert (fused_out / "fusion_summary.json").exists()
+    assert len(list((fused_out / "images").glob("*.png"))) == 4

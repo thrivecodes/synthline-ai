@@ -29,6 +29,9 @@ from synthline_ai.generation.pipeline import run_generation
 from synthline_ai.ingestion.loader import load_seeds
 from synthline_ai.ingestion.quality import check_seed_quality
 from synthline_ai.labeling.export import export_coco, export_voc, export_yolo
+from synthline_ai.labeling.fusion import merge_datasets
+from synthline_ai.recipes.models import GenerationRecipe
+from synthline_ai.recipes.presets import get_preset, list_presets
 from synthline_ai.validation.checks import (
     check_brightness_distribution,
     check_output_duplicates,
@@ -43,6 +46,18 @@ from synthline_ai.validation.statistics import compute_split_statistics, compute
 app = typer.Typer(
     name="synthline-ai",
     help="Synthetic visual-data generation for computer vision.",
+    no_args_is_help=True,
+)
+
+recipe_app = typer.Typer(
+    name="recipe",
+    help="Industry domain recipe presets and declarative workflows.",
+    no_args_is_help=True,
+)
+
+dataset_app = typer.Typer(
+    name="dataset",
+    help="Dataset operations, merging, and fusion.",
     no_args_is_help=True,
 )
 
@@ -80,11 +95,52 @@ def generate(
     auto_roi: bool = typer.Option(
         False, help="Constrain defects strictly within workpiece boundary"
     ),
+    preset: str | None = typer.Option(
+        None,
+        "--preset",
+        help="Industry domain preset to load parameters from",
+    ),
 ) -> None:
     """Generate synthetic defect images from seed images."""
     start_time = time.time()
 
     console.print(f"\n[bold]SynthLine AI[/bold] v{__version__}\n")
+
+    # Apply preset defaults if specified
+    if preset is not None:
+        try:
+            recipe = get_preset(preset)
+            console.print(
+                f"[cyan]Applied Preset:[/cyan] [bold]{recipe.title}[/bold] ({recipe.domain})"
+            )
+        except KeyError as err:
+            console.print(f"[red]Error:[/red] {err}")
+            raise typer.Exit(code=1) from None
+
+        if defect == "scratch" and recipe.defect_type:
+            defect = recipe.defect_type.value
+        if severity == 0.5:
+            severity = recipe.severity
+        if frequency == 1.0:
+            frequency = recipe.frequency
+        if not variations and recipe.enable_variations:
+            variations = recipe.enable_variations
+            lighting = recipe.lighting_intensity
+            texture = recipe.texture_intensity
+            geometry = recipe.geometry_intensity
+            sensor = recipe.sensor_intensity
+        if not compound and recipe.compound_defects:
+            compound = recipe.compound_defects
+            defects_per_image = recipe.defects_per_image
+        if not auto_roi and recipe.auto_roi:
+            auto_roi = recipe.auto_roi
+        if format == "coco" and recipe.export_format:
+            format = recipe.export_format.value
+        if not split and recipe.enable_split:
+            split = recipe.enable_split
+            train_ratio = recipe.split_ratio.train
+            val_ratio = recipe.split_ratio.val
+            test_ratio = recipe.split_ratio.test
 
     # Validate defect type
     try:
@@ -654,6 +710,221 @@ def export(
     console.print("[bold green]Export Complete:[/bold green]")
     console.print(table)
     console.print()
+
+
+# ---------------------------------------------------------------------------
+# Recipe Subcommands
+# ---------------------------------------------------------------------------
+
+
+@recipe_app.command("list")
+def recipe_list() -> None:
+    """List all available pre-configured industry domain recipes."""
+    presets = list_presets()
+    table = Table(
+        title="SynthLine AI — Industry Domain Presets",
+        box=None,
+        padding=(0, 1),
+        collapse_padding=True,
+    )
+    table.add_column("Preset Slug", style="bold cyan", no_wrap=True)
+    table.add_column("Domain", style="green")
+    table.add_column("Title")
+    table.add_column("Defect", style="dim")
+    table.add_column("ROI")
+    table.add_column("Compound")
+
+    for p in presets:
+        compound_val = (
+            f"[green]Yes ({p.defects_per_image})[/green]" if p.compound_defects else "[dim]No[/dim]"
+        )
+        table.add_row(
+            p.name,
+            p.domain,
+            p.title,
+            p.defect_type.value,
+            "[green]Yes[/green]" if p.auto_roi else "[dim]No[/dim]",
+            compound_val,
+        )
+    console.print()
+    console.print(table)
+    console.print("\n[dim]Run 'synthline generate --preset <slug>' to execute a preset.[/dim]\n")
+
+
+@recipe_app.command("inspect")
+def recipe_inspect(
+    name: str = typer.Argument(..., help="Preset name or path to recipe JSON file"),
+) -> None:
+    """Display the detailed configuration of a domain recipe or preset."""
+    recipe: GenerationRecipe
+    p = Path(name)
+    if p.exists() and p.is_file():
+        try:
+            recipe = GenerationRecipe.load(p)
+        except Exception as exc:
+            console.print(f"[red]Error loading recipe file:[/red] {exc}")
+            raise typer.Exit(code=1) from None
+    else:
+        try:
+            recipe = get_preset(name)
+        except KeyError as exc:
+            console.print(f"[red]Error:[/red] {exc}")
+            raise typer.Exit(code=1) from None
+
+    console.print(f"\n[bold]{recipe.title}[/bold] ([green]{recipe.domain}[/green])")
+    if recipe.description:
+        console.print(f"[italic]{recipe.description}[/italic]\n")
+
+    table = Table(show_header=False, box=None, padding=(0, 2))
+    table.add_column("Parameter", style="bold")
+    table.add_column("Value")
+
+    table.add_row("Slug", recipe.name)
+    table.add_row("Defect type", recipe.defect_type.value)
+    table.add_row("Severity", str(recipe.severity))
+    table.add_row("Frequency", str(recipe.frequency))
+    table.add_row(
+        "Environmental variations",
+        "[green]Enabled[/green]" if recipe.enable_variations else "[dim]Disabled[/dim]",
+    )
+    if recipe.enable_variations:
+        table.add_row("  Lighting intensity", str(recipe.lighting_intensity))
+        table.add_row("  Texture intensity", str(recipe.texture_intensity))
+        table.add_row("  Geometry jitter", str(recipe.geometry_intensity))
+        table.add_row("  Sensor noise", str(recipe.sensor_intensity))
+    table.add_row(
+        "Compound defects",
+        f"[green]Yes ({recipe.defects_per_image} per image)[/green]"
+        if recipe.compound_defects
+        else "[dim]No[/dim]",
+    )
+    table.add_row(
+        "Workpiece boundary (Auto ROI)",
+        "[green]Enforced[/green]" if recipe.auto_roi else "[dim]Disabled[/dim]",
+    )
+    table.add_row("Export format", recipe.export_format.value)
+    table.add_row(
+        "Dataset split",
+        (
+            f"train={recipe.split_ratio.train}, "
+            f"val={recipe.split_ratio.val}, "
+            f"test={recipe.split_ratio.test}"
+        )
+        if recipe.enable_split
+        else "[dim]Disabled[/dim]",
+    )
+
+    console.print(table)
+    console.print()
+
+
+@recipe_app.command("export")
+def recipe_export(
+    preset: str = typer.Argument(..., help="Preset slug to export"),
+    output: Path = typer.Option(..., "--output", "-o", help="Target JSON file path"),
+) -> None:
+    """Export an industry domain preset to a JSON recipe file for custom editing."""
+    try:
+        recipe = get_preset(preset)
+    except KeyError as exc:
+        console.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(code=1) from None
+
+    saved_path = recipe.save(output)
+    console.print(f"[green]Exported recipe:[/green] {recipe.title} -> {saved_path}")
+
+
+@recipe_app.command("run")
+def recipe_run(
+    recipe: str = typer.Argument(..., help="Preset slug or path to recipe JSON file"),
+    seeds: Path = typer.Option(..., "--seeds", "-s", help="Directory of seed images"),
+    output: Path = typer.Option(..., "--output", "-o", help="Output directory"),
+    count: int = typer.Option(100, min=1, max=10000, help="Number of images to generate"),
+    seed: int = typer.Option(42, help="Random seed for reproducibility"),
+) -> None:
+    """Execute dataset generation directly using an industry recipe or preset."""
+    rec: GenerationRecipe
+    p = Path(recipe)
+    if p.exists() and p.is_file():
+        try:
+            rec = GenerationRecipe.load(p)
+        except Exception as exc:
+            console.print(f"[red]Error loading recipe file:[/red] {exc}")
+            raise typer.Exit(code=1) from None
+    else:
+        try:
+            rec = get_preset(recipe)
+        except KeyError as exc:
+            console.print(f"[red]Error:[/red] {exc}")
+            raise typer.Exit(code=1) from None
+
+    generate(
+        seeds=seeds,
+        defect=rec.defect_type.value,
+        count=count,
+        output=output,
+        seed=seed,
+        severity=rec.severity,
+        frequency=rec.frequency,
+        format=rec.export_format.value,
+        split=rec.enable_split,
+        train_ratio=rec.split_ratio.train,
+        val_ratio=rec.split_ratio.val,
+        test_ratio=rec.split_ratio.test,
+        variations=rec.enable_variations,
+        lighting=rec.lighting_intensity,
+        texture=rec.texture_intensity,
+        geometry=rec.geometry_intensity,
+        sensor=rec.sensor_intensity,
+        compound=rec.compound_defects,
+        defects_per_image=rec.defects_per_image,
+        auto_roi=rec.auto_roi,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Dataset Fusion Subcommands
+# ---------------------------------------------------------------------------
+
+
+@dataset_app.command("merge")
+def dataset_merge(
+    runs: list[Path] = typer.Argument(..., help="Dataset run directories to merge"),
+    output: Path = typer.Option(
+        ..., "--output", "-o", help="Destination directory for merged dataset"
+    ),
+) -> None:
+    """Merge multiple generated dataset runs into a unified benchmark dataset."""
+    console.print(f"\n[bold]SynthLine AI — Dataset Fusion[/bold] v{__version__}\n")
+    console.print(f"Merging [bold]{len(runs)}[/bold] dataset runs -> {output}\n")
+
+    for r in runs:
+        if not r.exists() or not r.is_dir():
+            console.print(f"[red]Error:[/red] Directory not found: {r}")
+            raise typer.Exit(code=1)
+
+    try:
+        summary = merge_datasets(runs, output)
+    except Exception as exc:
+        console.print(f"[red]Fusion Error:[/red] {exc}")
+        raise typer.Exit(code=1) from None
+
+    table = Table(show_header=False, box=None, padding=(0, 2))
+    table.add_column("Key", style="bold")
+    table.add_column("Value")
+    table.add_row("Merged runs", str(summary["merged_runs_count"]))
+    table.add_row("Total images", str(summary["total_images"]))
+    table.add_row("Total annotations", str(summary["total_annotations"]))
+    table.add_row("Categories", ", ".join(summary["categories"]))
+    table.add_row("Output directory", summary["output_directory"])
+
+    console.print("[bold green]Fusion Complete:[/bold green]")
+    console.print(table)
+    console.print()
+
+
+app.add_typer(recipe_app, name="recipe")
+app.add_typer(dataset_app, name="dataset")
 
 
 if __name__ == "__main__":

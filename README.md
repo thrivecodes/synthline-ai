@@ -579,6 +579,44 @@ The command should produce:
 - preview contact sheet
 - basic quality report
 
+### Declarative Recipes & Industry Presets
+
+SynthLine AI includes pre-configured recipes for major industrial inspection domains:
+
+```bash
+# List available domain presets
+synthline recipe list
+
+# Inspect recipe configuration
+synthline recipe inspect automotive_stamping
+
+# Export preset to JSON for custom tuning
+synthline recipe export automotive_stamping --output ./my_recipe.json
+
+# Execute generation directly from a recipe or preset
+synthline recipe run automotive_stamping --seeds ./seeds --output ./runs/auto_stamping --count 200
+
+# Or apply preset to generate command
+synthline generate --seeds ./seeds --preset semiconductor_wafer --output ./runs/wafer --count 100
+```
+
+| Preset Slug | Industry Domain | Key Characteristics |
+|:---|:---|:---|
+| `automotive_stamping` | Automotive Sheet Metal | Die abrasions, stamping dents, directional lighting, workpiece ROI |
+| `semiconductor_wafer` | Semiconductor Cleanroom | Microcracks, etching pinholes, CVD discoloration rings |
+| `pcb_electronics` | Electronics & SMT | Hairline trace cracks, solder voids, chemical flux stains, compound |
+| `pharmaceutical_packaging` | Pharma & Blister Seals | Foil pinholes, crimp cracks, fluid residue contamination |
+| `textile_fabric` | Woven Fabrics | Yarn abrasions, oil drips, dye discoloration across dense textures |
+| `glass_optics` | Precision Optics | Surface scratches, micro-pits, edge chipping, refraction anomalies |
+
+### Multi-Run Dataset Fusion
+
+Merge multiple generation runs into a unified benchmark dataset with re-indexed COCO IDs, non-colliding image files, and unified categories:
+
+```bash
+synthline dataset merge ./runs/run_scratches ./runs/run_cracks ./runs/run_stains --output ./runs/fused_benchmark
+```
+
 ---
 
 ## Browser workflow and API vision

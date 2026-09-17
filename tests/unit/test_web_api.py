@@ -34,6 +34,16 @@ def test_api_info_and_ui(client: TestClient) -> None:
     assert "SynthLine AI" in res_ui.text
 
 
+def test_api_recipes(client: TestClient) -> None:
+    res = client.get("/api/recipes")
+    assert res.status_code == 200
+    data = res.json()
+    assert len(data) == 6
+    slugs = [r["name"] for r in data]
+    assert "automotive_stamping" in slugs
+    assert "semiconductor_wafer" in slugs
+
+
 def test_api_projects_crud(client: TestClient) -> None:
     # List empty
     res = client.get("/api/projects")

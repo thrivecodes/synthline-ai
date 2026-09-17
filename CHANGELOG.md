@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2026-09-17
+
+### Added
+- **Declarative Recipe Engine & Industry Domain Presets (`synthline_ai.recipes`)**:
+  - Pydantic-based `GenerationRecipe` supporting JSON serialization (`to_json`, `save`, `load`) and `.to_config()` conversion.
+  - 6 domain presets: `automotive_stamping`, `semiconductor_wafer`, `pcb_electronics`, `pharmaceutical_packaging`, `textile_fabric`, and `glass_optics`.
+  - Preset CLI suite: `synthline recipe list`, `synthline recipe inspect <name>`, `synthline recipe export <name>`, `synthline recipe run <name>`.
+  - Added `--preset <name>` flag to `synthline generate` for 1-step domain-optimized synthesis.
+- **Dataset Fusion & Multi-Run Dataset Merging (`synthline_ai.labeling.fusion`)**:
+  - `merge_datasets` engine combining multiple runs into a unified benchmark.
+  - Global category unification, sequential re-indexing of image IDs and annotation IDs, and run-prefixed image/mask filenames preventing collisions.
+  - CLI command: `synthline dataset merge <run_dirs...> --output <out_dir>`.
+- **Local Studio UI Domain Preset Integration**:
+  - Added "Industry Domain Preset" dropdown in the "Generate Defect" tab with instant configuration presets and contextual domain badges.
+  - Added `GET /api/recipes` endpoint returning available industry presets.
+
 ## [0.2.2] - 2026-09-17
 
 ### Added
