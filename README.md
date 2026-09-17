@@ -1,279 +1,203 @@
+## Executive assessment
+
+SynthLine has a strong technical foundation, but the current README describes too many possible products at once. The most important change before development is to narrow the initial product promise.
+
+The best first version is not “synthetic visual-data generation for everyone.” It should be:
+
+> **A local-first workbench for generating, validating, and exporting labeled defect datasets from a small set of normal product images.**
+
+That positioning is clearer, easier to build, easier to demonstrate, and easier to distribute.
+
+### What SynthLine should actually do
+
+A user should be able to:
+
+1. Import a small set of normal images.
+2. Run image-quality checks.
+3. Select a defect type such as scratches or stains.
+4. Choose quantity, severity, frequency, and a random seed.
+5. Generate synthetic images with masks and bounding boxes.
+6. Review original/generated image pairs.
+7. Inspect dataset-quality statistics.
+8. Export the result to COCO, YOLO, or a ZIP archive.
+9. Re-run the exact same generation configuration later.
+10. Compare generated data against a small real validation set when available.
+
+### Recommended initial customer
+
+Start with one narrow customer group:
+
+- Independent computer-vision developers.
+- Researchers and students.
+- Small machine-vision teams.
+- Manufacturers experimenting with surface-defect inspection.
+
+Do not initially try to serve security, retail, agriculture, robotics, education, creators, and enterprise teams equally. Those groups have different data requirements, purchasing processes, and definitions of “useful synthetic data.”
+
+### Recommended initial defect types
+
+Start with the easiest and most explainable generators:
+
+1. Scratches and line marks.
+2. Stains and discoloration.
+3. Surface texture and lighting variation.
+
+Delay dents and deformations. They are much harder to make realistic without understanding the object’s geometry, material, and lighting.
+
+### Key product risk
+
+The main risk is not whether SynthLine can generate attractive images. The real risk is whether generated images improve performance on real images.
+
+Every feature should support this question:
+
+> Does this synthetic dataset help a real computer-vision model perform better on unseen real-world data?
+
+### Distribution recommendation
+
+Distribution should be designed into the product from the start:
+
+- A free local CLI that requires no API key.
+- Public example projects and downloadable sample datasets.
+- Export compatibility with COCO, YOLO, Ultralytics, Roboflow, and common Python workflows.
+- Shareable generation recipes and HTML reports.
+- A gallery of reproducible examples.
+- Documentation focused on practical outcomes rather than technical features.
+- Public benchmark results showing when synthetic data helps and when it does not.
+- A hosted version only after the local workflow proves demand.
+
+The local CLI is not just a development tool. It should be the main acquisition channel. Developers can try it without procurement, credentials, or uploading sensitive images. The hosted product can later add collaboration, storage, team management, and large-scale generation.
+
+---
+
+# Replacement README.md
+
+````markdown
 # SynthLine
 
-**Synthetic visual-data generation for everyone.** SynthLine turns a small set of real “good” images into a larger, labeled dataset of realistic defects, variations, and anomalies for computer-vision experimentation, training, and evaluation.
+**Generate reproducible, labeled defect datasets from a small set of normal images.**
 
-> **Status:** private repository, pre-MVP. The current priority is proving a reproducible generation and validation loop that is useful to individuals, students, researchers, developers, creators, and organizations.
+SynthLine is a local-first synthetic visual-data generation workbench for computer-vision developers, researchers, students, and small machine-vision teams.
 
-## Product vision
-
-SynthLine is a general-purpose tool for creating synthetic visual data from a small collection of real images. Anyone should be able to use it for learning, prototyping, research, dataset augmentation, or computer-vision projects without needing a large dataset or specialized simulation team.
-
-The product will be especially valuable to companies that need repeatable, private, and scalable data generation for inspection, quality assurance, product development, robotics, security, retail, agriculture, and other visual workflows.
-
-A typical user can:
-
-1. Upload a small set of real “good” or normal images.
-2. Define one or more defect, anomaly, or variation types.
-3. Generate synthetic images with exact masks and bounding boxes.
-4. Preview and validate the generated dataset.
-5. Download a standard dataset for an existing computer-vision pipeline.
-
-SynthLine is a **data-generation tool**, not an end-to-end inspection-model hosting product. It should work for individual users while offering stronger privacy, reproducibility, collaboration, and scale for organizations.
-
-## Who it is for
-
-### Everyone
-
-- Students learning computer vision.
-- Independent developers and makers.
-- Researchers testing computer-vision ideas.
-- Data scientists who need more examples for a prototype.
-- Educators creating practical training datasets.
-- Creators building image-analysis tools.
-
-### Organizations and companies
-
-- Manufacturing and quality-inspection teams.
-- Machine-vision integrators and consultancies.
-- Robotics and automation companies.
-- Retail, logistics, and agriculture teams.
-- Security and infrastructure teams.
-- Product, engineering, and research groups with limited labeled data.
-
-The general product should remain simple and accessible. Company-focused capabilities can provide larger generation limits, private storage, team workspaces, audit logs, retention controls, support, and integrations without making the basic workflow difficult for individual users.
-
-## MVP scope
-
-### In scope
-
-- One image domain or project per generation run.
-- 2D images only.
-- A small set of real seed images.
-- User-defined defect, anomaly, or variation types.
-- Procedural generation as the first and most predictable strategy.
-- Basic lighting, texture, background, and geometric randomization.
-- Automatic segmentation masks and bounding boxes.
-- COCO-style JSON plus images and masks.
-- A preview gallery and dataset-quality report.
-- A lightweight validation harness with optional probe-model training.
-- Reproducible generation using recorded configuration and random seeds.
-- A local CLI and a simple browser workflow.
-
-### Explicitly out of scope for v1
-
-- 3D/CAD ingestion and digital-twin simulation.
-- Video or temporal defects.
-- Non-visual signals such as sound, vibration, or thermal data.
-- Multi-domain projects in a single generation run.
-- Training and hosting a user’s production model.
-- Fine-grained parameter tuning beyond type, severity, frequency, and basic variation controls.
-
-## Implementation plan
-
-The first release should be a complete vertical slice:
+It transforms a small collection of real “good” images into a larger dataset containing controlled scratches, stains, discoloration, texture variations, and other visual anomalies—with segmentation masks, bounding boxes, metadata, previews, and dataset-quality reports generated automatically.
 
 ```text
-Seed images
-    → ingestion and QA
-    → procedural defect/anomaly synthesis
-    → masks and bounding boxes
-    → COCO export
-    → visual preview and statistics
-    → optional probe-model validation
+Normal seed images
+        ↓
+Image quality checks
+        ↓
+Defect and variation configuration
+        ↓
+Synthetic image generation
+        ↓
+Masks and bounding boxes
+        ↓
+Validation and visual review
+        ↓
+COCO / YOLO / ZIP export
 ```
 
-The initial implementation should be local-first. A Python library and CLI will make the generation pipeline testable and useful before a browser UI or hosted job system is introduced.
+> **Status:** Pre-MVP  
+> The initial goal is to prove that a reproducible procedural generation and validation workflow can create useful data for real computer-vision problems.
 
-### Recommended stack
+---
 
-- **Python 3.11+** for the generation and validation pipeline.
-- **OpenCV, NumPy, Pillow, and scikit-image** for image processing.
-- **Albumentations** for augmentation and domain randomization.
-- **Pydantic** for project and generation configuration.
-- **FastAPI** for the API once the core pipeline is stable.
-- **Gradio or Streamlit** for the first UI prototype; a separate React/Next.js UI can follow.
-- **SQLite and local filesystem** for initial metadata and artifacts.
-- A Redis-backed worker system only when generation jobs need to run asynchronously at scale.
+## Why SynthLine exists
 
-Do not introduce microservices, Kubernetes, or cloud-specific infrastructure until the generation and evaluation loop demonstrates value.
+Computer-vision projects often fail because teams do not have enough labeled images.
 
-## Generation strategies
+Collecting more real-world defect images can be:
 
-The generation engine should expose a common strategy interface so techniques can be compared without changing ingestion, labeling, export, or validation.
+- Expensive.
+- Slow.
+- Difficult to reproduce.
+- Dependent on rare failures.
+- Risky when products or facilities are confidential.
+- Difficult for students and independent developers.
+- Operationally expensive when every image must be labeled manually.
 
-### Procedural perturbation — first implementation
+SynthLine provides a controlled way to create additional training and evaluation data from a small set of normal images.
 
-Procedural generation is the v1 default because it is fast, deterministic, explainable, and produces labels by construction.
+The goal is not to generate visually impressive images for their own sake. The goal is to help users test computer-vision systems with less manual data collection and labeling.
 
-Initial generation types:
+---
 
-- **Scratch or line mark:** curved or jagged variable-width paths blended into the source image.
-- **Discoloration or stain:** irregular blurred regions with localized hue, saturation, or brightness changes.
-- **Dent or deformation:** shaded irregular regions with a brightened rim; initially experimental because realistic results depend heavily on lighting.
-- **Texture and appearance variation:** controlled changes to lighting, contrast, noise, background, orientation, and other non-essential factors.
+## Product promise
 
-Every generator should return the modified image, one or more masks, parameters, severity, and the random seed used.
+Given a small set of consistently framed normal images, SynthLine should allow a user to:
 
-### Future strategies
+1. Validate the quality of the input images.
+2. Define one or more defect or variation types.
+3. Generate synthetic images deterministically.
+4. Produce pixel-level masks and bounding boxes automatically.
+5. Review generated samples and statistics.
+6. Export a standard dataset for an existing computer-vision pipeline.
+7. Reproduce or modify the generation run later.
+8. Measure whether synthetic data improves performance on real images.
 
-- Diffusion-based local inpainting.
-- More advanced lighting-aware geometry and texture simulation.
-- Domain-specific generation packs for different use cases.
-- User-provided reference images for guiding generation.
-- Organization-specific generation strategies selected from validation results.
+SynthLine is a **synthetic data generation and validation tool**.
 
-Generative inpainting should be added only after procedural generation establishes a measurable baseline.
+It is not initially intended to be:
 
-## System architecture
+- A complete defect-detection product.
+- A hosted model-training platform.
+- A replacement for real-world validation data.
+- A guarantee that synthetic data will improve model performance.
+- A general-purpose image-generation platform.
+
+---
+
+## Initial target users
+
+SynthLine is designed initially for:
+
+- Independent computer-vision developers.
+- Machine-learning researchers.
+- Students and educators.
+- Makers and technical founders.
+- Small manufacturing and quality-inspection teams.
+- Machine-vision integrators and consultants.
+- Teams prototyping defect-detection systems with limited labeled data.
+
+The first product wedge is **surface-defect dataset generation**, especially for objects or materials where users can provide consistently framed normal images.
+
+Examples include:
+
+- Product surfaces.
+- Manufactured parts.
+- Packaging.
+- Printed materials.
+- Wood, metal, plastic, ceramic, or painted surfaces.
+- Simple inspection scenes with relatively stable framing.
+
+---
+
+## Example workflow
+
+A typical project looks like this:
 
 ```text
-                         ┌────────────────────┐
-  Seed images ──────────▶│ Ingestion and QA    │
-  User configuration ───▶│ Project management  │
-                         └─────────┬──────────┘
-                                   ▼
-                         ┌────────────────────┐
-                         │ Generation engine  │
-                         │ procedural first   │
-                         │ randomization      │
-                         │ inpainting later   │
-                         └─────────┬──────────┘
-                                   ▼
-                         ┌────────────────────┐
-                         │ Labeling and export │
-                         │ masks, boxes, COCO  │
-                         └─────────┬──────────┘
-                                   ▼
-                         ┌────────────────────┐
-                         │ Validation harness  │
-                         │ reports and preview │
-                         └────────────────────┘
+Create a project
+    ↓
+Add normal seed images
+    ↓
+Review image-quality warnings
+    ↓
+Select "scratch"
+    ↓
+Choose count, severity, frequency, and seed
+    ↓
+Generate the dataset
+    ↓
+Review image/mask overlays and contact sheets
+    ↓
+Inspect the quality report
+    ↓
+Export to COCO, YOLO, or ZIP
+    ↓
+Train or evaluate a separate computer-vision model
 ```
 
-### Proposed repository structure
-
-```text
-synthline/
-├── pyproject.toml
-├── README.md
-├── src/
-│   └── synthline/
-│       ├── ingestion/          # image loading, validation, and QA
-│       ├── generation/
-│       │   ├── procedural/     # scratch, dent, discoloration generators
-│       │   ├── inpainting/     # future diffusion-based edits
-│       │   └── randomization/  # lighting, texture, and transforms
-│       ├── labeling/           # masks, boxes, and COCO export
-│       ├── validation/         # statistics, previews, and probe models
-│       ├── projects/           # configuration and artifact storage
-│       └── cli.py
-├── api/                        # FastAPI application, after the core pipeline
-├── web/                        # browser UI
-├── tests/                      # unit, integration, and fixture tests
-├── benchmarks/                 # public dataset fixtures and evaluations
-├── docs/
-└── scripts/
-```
-
-## Data model and reproducibility
-
-A generation must preserve the configuration that produced it. At minimum, record:
-
-- project and domain;
-- source seed image for every generated image;
-- generation or anomaly type, severity, and parameters;
-- generation method;
-- random seed;
-- image dimensions and artifact paths;
-- dataset split.
-
-Example metadata:
-
-```json
-{
-  "image": "image_0001_scratch.png",
-  "source_seed": "seed_004.png",
-  "domain": "product_surface",
-  "generation_method": "procedural_perturbation",
-  "random_seed": 884321,
-  "labels": [
-    {
-      "type": "scratch",
-      "severity": "moderate",
-      "bbox": [124, 88, 212, 101],
-      "mask": "masks/image_0001_scratch_mask.png"
-    }
-  ]
-}
-```
-
-Generated images should be reproducible from the project configuration and seed. This is essential for debugging, benchmark comparisons, collaboration, and customer support.
-
-## Ingestion and seed-set QA
-
-The ingestion layer should check and report:
-
-- unsupported or corrupted files;
-- image dimensions and color modes;
-- extreme brightness, darkness, or blur;
-- duplicate and near-duplicate images;
-- inconsistent framing or orientation;
-- whether the subject or region can be localized reasonably.
-
-Warnings should not block early experimentation unless an image is unusable. A QA report might identify inconsistent lighting or dimensions while still allowing the user to generate a dataset.
-
-For the first prototype, assume users supply consistently framed or cropped images. Automatic subject or part segmentation can be added once the core generation loop is validated.
-
-## Labels and export
-
-Masks should be generated internally for every synthetic region because they are the source of truth. Bounding boxes can then be derived from masks. The default export should contain:
-
-```text
-export/
-├── images/
-├── masks/
-├── annotations.json       # COCO-style JSON
-├── metadata.jsonl         # per-image generation metadata
-└── report.html or report.json
-```
-
-COCO annotations should include image IDs, category IDs, bounding boxes, areas, and segmentation data. Users should be able to request either bounding-box-only output or images with segmentation masks.
-
-### Avoiding split leakage
-
-Do not randomly split generated images when variants derived from the same source seed appear in both training and validation. Prefer splitting the original seed images first, then generating each dataset split from its own seed subset. If too few seeds are available, record the relationship and label the validation result as an estimate.
-
-## Validation methodology
-
-The central technical risk is the sim-to-real gap. Visual plausibility alone is not evidence that generated data will improve a real computer-vision model.
-
-### Automated dataset checks
-
-- Empty or nearly empty masks.
-- Invalid boxes and segmentation geometry.
-- Label area and severity distributions.
-- Class balance and generation failure rate.
-- Brightness, contrast, and texture distributions.
-- Duplicate or near-duplicate outputs.
-
-### Visual checks
-
-Generate contact sheets showing:
-
-- original/generated pairs;
-- mask overlays;
-- examples grouped by generation type and severity;
-- smallest and largest generated regions.
-
-### Probe-model checks
-
-Where real labeled examples are available, train a small fixed baseline model on generated data and evaluate it on held-out real images. Report precision, recall, and F1 separately for each label type. Clearly distinguish dataset-health checks from evidence of transfer to real-world data.
-
-Public datasets can be used for internal benchmarks. User and company images should remain user-controlled and should not be used to train shared models without explicit consent.
-
-## Initial CLI target
-
-The first end-to-end prototype should support a command like:
+Example command:
 
 ```bash
 synthline generate \
@@ -284,140 +208,1152 @@ synthline generate \
   --seed 12345
 ```
 
-The command should produce images, masks, COCO annotations, metadata, a preview contact sheet, and a basic quality report.
+The output should include:
 
-## API and UI workflow
+```text
+runs/example-scratch/
+├── images/
+├── masks/
+├── annotations.coco.json
+├── annotations.yolo/
+├── metadata.jsonl
+├── config.json
+├── preview.html
+├── contact-sheet.jpg
+└── report.json
+```
 
-After the CLI works, expose the same library through a small API:
+---
+
+## Core principles
+
+### 1. Local-first
+
+The core generation pipeline should run locally without an external API key.
+
+This makes SynthLine:
+
+- Easy to try.
+- Suitable for private images.
+- Useful in classrooms and research environments.
+- Compatible with offline workflows.
+- Easier to test and benchmark.
+- Less expensive to operate during the early product stage.
+
+A hosted version can be added later for collaboration, storage, and larger jobs.
+
+### 2. Reproducibility
+
+Every generation run must record the configuration and random seed used to produce it.
+
+A user should be able to reproduce a run from:
+
+- The project configuration.
+- The source seed images.
+- The generator version.
+- The generation strategy.
+- The random seed.
+- The requested output count.
+- The environment or package version where practical.
+
+### 3. Labels by construction
+
+Masks should be generated as part of the image-generation process.
+
+Bounding boxes should be derived from masks rather than drawn independently.
+
+This keeps the image, mask, segmentation, and bounding-box labels aligned.
+
+### 4. Validation over visual appeal
+
+A realistic-looking image is not enough.
+
+SynthLine should report:
+
+- Whether masks are valid.
+- Whether labels are balanced.
+- Whether generated images are duplicates.
+- Whether generated regions are too small or too large.
+- Whether the generated distribution is materially different from the seed distribution.
+- Whether synthetic data improves performance on real validation images when those images are available.
+
+### 5. Simple defaults
+
+The first user should not need to understand every low-level generation parameter.
+
+The interface should expose a small number of useful controls:
+
+- Defect type.
+- Quantity.
+- Severity.
+- Frequency.
+- Random seed.
+- Output format.
+
+Advanced parameters can be added later.
+
+---
+
+## MVP scope
+
+### Included in the MVP
+
+- Python package and CLI.
+- Local project configuration.
+- Importing common image formats.
+- Seed-image quality checks.
+- Procedural scratch generation.
+- Procedural stain and discoloration generation.
+- Basic lighting and texture variation.
+- Severity and frequency controls.
+- Deterministic random seeds.
+- Pixel masks.
+- Bounding boxes derived from masks.
+- COCO-style export.
+- YOLO-style export.
+- Per-image generation metadata.
+- Preview contact sheets.
+- HTML or JSON quality reports.
+- Seed-aware train, validation, and test splitting.
+- Unit and integration tests.
+- Optional baseline model evaluation when real labeled images are available.
+
+### Explicitly out of scope for the first release
+
+- 3D or CAD ingestion.
+- Digital-twin simulation.
+- Video generation.
+- Temporal defects.
+- Audio, vibration, thermal, or other non-visual signals.
+- Production model hosting.
+- End-to-end model deployment.
+- Automatic segmentation of arbitrary complex objects.
+- Multi-domain generation in one run.
+- Enterprise identity management.
+- Kubernetes or microservice infrastructure.
+- Diffusion-based generation as the primary method.
+- A marketplace for datasets or generation strategies.
+
+---
+
+## Initial generation strategies
+
+SynthLine should expose a common generation interface so that different strategies can be compared without changing ingestion, labeling, export, or validation.
+
+Conceptually:
+
+```python
+class Generator:
+    name: str
+
+    def generate(
+        self,
+        image,
+        config,
+        random_state,
+    ) -> GenerationResult:
+        ...
+```
+
+Each generator should return:
+
+- The modified image.
+- One or more masks.
+- Bounding boxes derived from the masks.
+- Defect or variation type.
+- Severity.
+- Parameters used.
+- Random seed.
+- Generator version.
+- Failure or warning information when applicable.
+
+### Scratch and line marks
+
+The first generator should support:
+
+- Curved scratches.
+- Jagged scratches.
+- Variable-width lines.
+- Multiple scratches per image.
+- Different opacity levels.
+- Dark, bright, or mixed scratch appearance.
+- Blur and edge-softening controls.
+- Orientation and length variation.
+
+Scratch geometry should be generated before compositing the visual appearance so that the mask remains exact.
+
+### Stains and discoloration
+
+The initial stain generator should support:
+
+- Irregular connected regions.
+- Blurred edges.
+- Hue changes.
+- Saturation changes.
+- Brightness changes.
+- Multiple stain sizes.
+- Different opacity levels.
+- Localized and diffuse discoloration.
+
+### Texture and appearance variation
+
+Non-defect variation can help prevent models from memorizing irrelevant visual properties.
+
+Initial variations may include:
+
+- Brightness.
+- Contrast.
+- Color temperature.
+- Noise.
+- Blur.
+- Small rotations.
+- Small translations.
+- Background variation where safe.
+- Mild scale variation.
+- Texture intensity.
+
+These variations should not accidentally change the semantic label or create invalid masks.
+
+### Dents and deformations
+
+Dents are intentionally experimental.
+
+Realistic dents depend on:
+
+- Object geometry.
+- Material properties.
+- Lighting direction.
+- Camera position.
+- Surface reflectance.
+- Scene context.
+
+They should not be marketed as reliable until benchmark results demonstrate that they are useful.
+
+---
+
+## Generation configuration
+
+A generation configuration should be explicit, versioned, and serializable.
+
+Example:
+
+```json
+{
+  "project_name": "metal-surface-demo",
+  "domain": "product_surface",
+  "source_directory": "./data/good",
+  "generation_method": "procedural",
+  "generators": [
+    {
+      "type": "scratch",
+      "count": 1,
+      "severity": "moderate",
+      "frequency": 0.8
+    },
+    {
+      "type": "discoloration",
+      "count": 1,
+      "severity": "low",
+      "frequency": 0.35
+    }
+  ],
+  "output_count": 500,
+  "image_format": "png",
+  "random_seed": 12345,
+  "split_strategy": "seed_aware",
+  "export_formats": ["coco", "yolo"]
+}
+```
+
+The configuration should be saved with every generation run.
+
+---
+
+## Data model and metadata
+
+Every generated image must retain its relationship to the source seed image.
+
+Example metadata record:
+
+```json
+{
+  "image": "images/image_0001_scratch.png",
+  "source_seed": "seed_004.png",
+  "domain": "product_surface",
+  "generation_method": "procedural",
+  "generator_version": "0.1.0",
+  "random_seed": 884321,
+  "split": "train",
+  "labels": [
+    {
+      "type": "scratch",
+      "severity": "moderate",
+      "bbox": [124, 88, 212, 101],
+      "area": 1674,
+      "mask": "masks/image_0001_scratch_mask.png",
+      "parameters": {
+        "width": 4.2,
+        "opacity": 0.72,
+        "length": 112.0
+      }
+    }
+  ]
+}
+```
+
+At minimum, SynthLine should record:
+
+- Project identifier.
+- Generation-run identifier.
+- Source seed image.
+- Generated image path.
+- Generation method.
+- Generator version.
+- Defect or variation type.
+- Severity.
+- Generator parameters.
+- Random seed.
+- Image dimensions.
+- Mask path.
+- Bounding box.
+- Mask area.
+- Dataset split.
+- Creation timestamp.
+- Warnings or generation failures.
+
+---
+
+## Input-image quality checks
+
+The ingestion layer should inspect and report:
+
+- Unsupported file formats.
+- Corrupted images.
+- Image dimensions.
+- Color modes.
+- Alpha channels.
+- Extreme brightness or darkness.
+- Excessive blur.
+- Duplicate images.
+- Near-duplicate images.
+- Inconsistent aspect ratios.
+- Inconsistent framing.
+- Orientation differences.
+- Images that are too small for the requested generation.
+- Images that contain unexpected subjects or backgrounds where detectable.
+
+Warnings should not block experimentation unless the image is unusable.
+
+For example:
+
+```text
+WARNING: seed_017.png is significantly darker than the seed-set median.
+WARNING: seed_023.png is a near-duplicate of seed_004.png.
+ERROR: seed_031.jpg could not be decoded.
+```
+
+The first version should assume that users provide consistently framed or cropped images. Automatic object or subject segmentation can be added later.
+
+---
+
+## Labels and export formats
+
+Masks are the source of truth.
+
+Bounding boxes should be computed from masks using a consistent convention:
+
+```text
+[x_min, y_min, width, height]
+```
+
+The default export should include:
+
+```text
+export/
+├── images/
+├── masks/
+├── annotations.coco.json
+├── annotations.yolo/
+├── metadata.jsonl
+├── config.json
+├── preview.html
+└── report.json
+```
+
+### COCO export
+
+COCO annotations should include:
+
+- Image IDs.
+- Image dimensions.
+- Category IDs.
+- Category names.
+- Bounding boxes.
+- Areas.
+- Segmentation data.
+- Annotation IDs.
+- Dataset metadata.
+
+### YOLO export
+
+YOLO export should support the common object-detection format:
+
+```text
+class_id center_x center_y width height
+```
+
+Coordinates should be normalized according to the YOLO specification.
+
+### Future export formats
+
+Potential future integrations include:
+
+- Ultralytics datasets.
+- Roboflow-compatible ZIP exports.
+- Pascal VOC.
+- Mask R-CNN formats.
+- Hugging Face dataset layouts.
+- Custom export templates.
+
+Export compatibility is important for distribution because users should be able to move from SynthLine into tools they already use.
+
+---
+
+## Avoiding data leakage
+
+Generated images derived from the same source image must not be randomly distributed across training and validation sets.
+
+The preferred process is:
+
+```text
+Split original seed images first
+        ↓
+Generate variants independently within each split
+```
+
+For example:
+
+```text
+seed_001.png → train
+seed_002.png → train
+seed_003.png → validation
+seed_004.png → test
+```
+
+All generated variants derived from `seed_003.png` must remain in the validation split.
+
+This prevents a model from appearing to generalize when it has effectively seen the same source image during training.
+
+---
+
+## Validation and quality reports
+
+Every generation run should produce machine-readable and human-readable validation results.
+
+### Automated checks
+
+The validation system should check:
+
+- Empty masks.
+- Nearly empty masks.
+- Masks outside image boundaries.
+- Invalid bounding boxes.
+- Negative or zero-sized boxes.
+- Invalid segmentation geometry.
+- Missing annotations.
+- Mismatched image and mask dimensions.
+- Class imbalance.
+- Label-area distributions.
+- Severity distributions.
+- Generation failure rates.
+- Duplicate outputs.
+- Near-duplicate outputs.
+- Unusual brightness or contrast.
+- Excessive image corruption.
+- Split leakage.
+- Unexpected output dimensions.
+
+### Visual checks
+
+The preview should include:
+
+- Original and generated image pairs.
+- Mask overlays.
+- Bounding-box overlays.
+- Examples grouped by defect type.
+- Examples grouped by severity.
+- Smallest generated regions.
+- Largest generated regions.
+- Failed or suspicious outputs.
+- Randomly selected examples.
+- Seed-image coverage.
+
+### Probe-model evaluation
+
+When real labeled images are available, SynthLine should support an optional baseline experiment:
+
+```text
+Train a small fixed model on generated data
+        ↓
+Evaluate on held-out real images
+        ↓
+Compare against a real-data-only baseline
+```
+
+The report should include:
+
+- Precision.
+- Recall.
+- F1 score.
+- Per-class metrics.
+- Confusion matrix where applicable.
+- Number of real training images.
+- Number of synthetic training images.
+- Generator configuration.
+- Random seed.
+- Model configuration.
+- Comparison with baseline.
+
+Synthetic data should be considered useful only when it produces measurable value on a relevant real-world evaluation set.
+
+---
+
+## Recommended architecture
+
+The first implementation should be a Python package with a CLI. The browser interface should use the same application services as the CLI rather than implementing a separate generation path.
+
+```text
+                    ┌─────────────────────┐
+                    │ CLI                  │
+                    └──────────┬──────────┘
+                               │
+                    ┌──────────▼──────────┐
+                    │ Application services │
+                    │ projects / runs      │
+                    └──────────┬──────────┘
+                               │
+       ┌───────────────────────┼───────────────────────┐
+       │                       │                       │
+┌──────▼──────┐        ┌───────▼────────┐       ┌──────▼──────┐
+│ Ingestion   │        │ Generation     │       │ Validation  │
+│ and QA      │        │ strategies     │       │ and reports │
+└──────┬──────┘        └───────┬────────┘       └──────┬──────┘
+       │                       │                       │
+       └───────────────────────┼───────────────────────┘
+                               │
+                    ┌──────────▼──────────┐
+                    │ Labeling and export │
+                    └─────────────────────┘
+```
+
+### Recommended technology
+
+- Python 3.11+.
+- NumPy.
+- OpenCV.
+- Pillow.
+- scikit-image.
+- Albumentations where appropriate.
+- Pydantic for configuration and validation.
+- Typer or Click for the CLI.
+- pytest for testing.
+- FastAPI after the core pipeline is stable.
+- SQLite for local project metadata.
+- Local filesystem for image artifacts.
+- Gradio or Streamlit for an early UI prototype.
+- React or Next.js only after the workflow has been validated.
+
+Do not introduce microservices, Kubernetes, Redis, cloud-specific infrastructure, or a distributed job system until real usage requires them.
+
+---
+
+## Proposed repository structure
+
+```text
+synthline/
+├── pyproject.toml
+├── README.md
+├── LICENSE
+├── src/
+│   └── synthline/
+│       ├── cli.py
+│       ├── config/
+│       │   ├── models.py
+│       │   └── defaults.py
+│       ├── ingestion/
+│       │   ├── loader.py
+│       │   ├── quality.py
+│       │   └── deduplication.py
+│       ├── generation/
+│       │   ├── base.py
+│       │   ├── pipeline.py
+│       │   ├── procedural/
+│       │   │   ├── scratch.py
+│       │   │   ├── discoloration.py
+│       │   │   └── deformation.py
+│       │   ├── randomization/
+│       │   │   ├── lighting.py
+│       │   │   ├── texture.py
+│       │   │   └── geometry.py
+│       │   └── registry.py
+│       ├── labeling/
+│       │   ├── masks.py
+│       │   ├── boxes.py
+│       │   └── segmentation.py
+│       ├── export/
+│       │   ├── coco.py
+│       │   ├── yolo.py
+│       │   └── archive.py
+│       ├── validation/
+│       │   ├── checks.py
+│       │   ├── statistics.py
+│       │   ├── previews.py
+│       │   └── probe_models.py
+│       ├── projects/
+│       │   ├── models.py
+│       │   ├── storage.py
+│       │   └── runs.py
+│       └── version.py
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   ├── fixtures/
+│   └── golden/
+├── benchmarks/
+├── examples/
+├── docs/
+├── scripts/
+└── web/
+```
+
+---
+
+## CLI design
+
+The CLI should make common tasks straightforward.
+
+### Create a project
+
+```bash
+synthline project init ./projects/metal-surface
+```
+
+### Inspect seed images
+
+```bash
+synthline inspect \
+  --seeds ./data/good \
+  --report ./reports/seed-quality.html
+```
+
+### Generate a dataset
+
+```bash
+synthline generate \
+  --project ./projects/metal-surface \
+  --defect scratch \
+  --count 500 \
+  --severity moderate \
+  --frequency 0.8 \
+  --output ./runs/scratch-500 \
+  --seed 12345
+```
+
+### Preview a run
+
+```bash
+synthline preview \
+  --run ./runs/scratch-500 \
+  --output ./runs/scratch-500/preview.html
+```
+
+### Validate a run
+
+```bash
+synthline validate \
+  --run ./runs/scratch-500
+```
+
+### Export a run
+
+```bash
+synthline export \
+  --run ./runs/scratch-500 \
+  --format coco \
+  --output ./exports/scratch-coco
+```
+
+### Reproduce a run
+
+```bash
+synthline reproduce \
+  --config ./runs/scratch-500/config.json \
+  --output ./runs/scratch-500-reproduced
+```
+
+---
+
+## API and browser workflow
+
+The API should be added after the local generation library is stable.
+
+A future API may expose:
 
 ```text
 POST   /projects
-POST   /projects/{id}/seeds
-POST   /projects/{id}/labels
-POST   /projects/{id}/generations
-GET    /generations/{id}
-GET    /generations/{id}/preview
-GET    /generations/{id}/report
-GET    /generations/{id}/download
+GET    /projects/{id}
 DELETE /projects/{id}
+
+POST   /projects/{id}/seeds
+GET    /projects/{id}/seeds
+
+POST   /projects/{id}/runs
+GET    /runs/{id}
+GET    /runs/{id}/preview
+GET    /runs/{id}/report
+GET    /runs/{id}/download
+DELETE /runs/{id}
 ```
 
-The first UI should follow a simple flow:
+The initial browser workflow should remain simple:
 
 ```text
-Create project → upload seeds → define variations → generate → preview → download
+Create project
+    → upload seed images
+    → review seed quality
+    → choose defect type
+    → configure generation
+    → generate
+    → review previews
+    → inspect report
+    → download dataset
 ```
 
-Long-running generation should initially use a simple background task. Add Redis and a dedicated worker only when job duration or concurrent users require it.
+Long-running generation can initially use a simple background task. A dedicated worker system should be introduced only when generation time or concurrent usage justifies it.
 
-## Development phases
+---
 
-### Phase 0 — technical spike
+## Hosted product direction
 
-- Establish the Python package and test setup.
-- Implement image loading and basic QA.
-- Implement procedural scratches and simple visual variations.
+The local product should remain useful on its own.
+
+A hosted version may later provide:
+
+- Private project storage.
+- Browser-based generation.
+- Team workspaces.
+- Background generation jobs.
+- Usage history.
+- Shareable reports.
+- Dataset versioning.
+- API access.
+- Role-based permissions.
+- Audit logs.
+- Configurable retention.
+- Organization-level integrations.
+- Private deployment options.
+
+The hosted version should not be required to validate the core product idea.
+
+---
+
+## Distribution strategy
+
+Synthetic-data tooling is difficult to distribute if it is positioned as a broad platform before users have a specific reason to try it.
+
+SynthLine should use a developer-first distribution strategy.
+
+### Free local CLI
+
+The CLI should be:
+
+- Free to install.
+- Usable without an account.
+- Usable without an API key.
+- Useful with a small local dataset.
+- Documented with copy-and-paste examples.
+
+This reduces the friction between discovering SynthLine and experiencing its value.
+
+### Public examples
+
+Provide downloadable example projects containing:
+
+- Seed images with a permissive license.
+- A generation configuration.
+- Generated outputs.
+- Quality reports.
+- Example model-evaluation results.
+- Reproduction instructions.
+
+Every example should answer:
+
+> What problem did the generated data help solve?
+
+### Reproducible recipes
+
+Users should be able to publish or share:
+
+- Seed-set descriptions.
+- Generator configuration.
+- Random seeds.
+- Output statistics.
+- Preview reports.
+- Benchmark results.
+
+A shareable recipe is more useful for adoption than a screenshot of generated images.
+
+### Integrations
+
+Prioritize exports and documentation for tools developers already use:
+
+- COCO.
+- YOLO.
+- Ultralytics.
+- PyTorch.
+- TensorFlow.
+- Roboflow.
+- Hugging Face datasets.
+- Standard Python data pipelines.
+
+### Content and search strategy
+
+Useful documentation topics include:
+
+- How to generate scratch-defect datasets.
+- How to train a defect detector with synthetic images.
+- How to avoid synthetic-data leakage.
+- How to validate synthetic images against real images.
+- When procedural generation is better than diffusion.
+- How to create segmentation masks automatically.
+- How to test whether synthetic data improves model recall.
+
+The distribution message should focus on outcomes, not on the internal architecture.
+
+### Community and benchmark loop
+
+Build a public benchmark around small, reproducible examples.
+
+Encourage users to share:
+
+- Seed-set characteristics.
+- Generation configurations.
+- Real validation results.
+- Failure cases.
+- Generator improvements.
+- Domain-specific recipes.
+
+Trust is especially important for synthetic data. Publishing negative results is valuable because it shows that SynthLine is measuring utility rather than promising that synthetic data always works.
+
+---
+
+## Business model direction
+
+Do not lock in pricing before observing actual usage.
+
+A possible future model is:
+
+### Free local edition
+
+- Local CLI.
+- Core procedural generators.
+- Basic exports.
+- Local reports.
+- Small public examples.
+
+### Hosted individual edition
+
+- Browser workflow.
+- Private project storage.
+- Larger generation limits.
+- Run history.
+- Shareable reports.
+- Additional exports.
+
+### Team and organization edition
+
+- Team workspaces.
+- Permissions.
+- Audit logs.
+- Retention controls.
+- API access.
+- Private deployment.
+- Priority support.
+- Custom generation strategies.
+- Higher generation limits.
+
+The value metric should eventually be tied to something users understand, such as generated images, compute usage, projects, or workspace capacity.
+
+---
+
+## Development roadmap
+
+### Phase 0: Technical spike
+
+- Establish the Python package.
+- Add configuration models.
+- Implement image loading.
+- Implement seed-image QA.
+- Implement scratch generation.
 - Generate masks and bounding boxes.
 - Export COCO annotations.
-- Create previews and dataset statistics.
+- Generate preview contact sheets.
+- Add basic statistics.
+- Create fixture-based tests.
 
-### Phase 1 — procedural MVP
+### Phase 1: Procedural MVP
 
-- Add discoloration and experimental dents.
+- Add discoloration and stain generation.
+- Add appearance randomization.
 - Add severity and frequency controls.
-- Record reproducible configurations and seeds.
-- Implement seed-aware train/validation/test splits.
-- Add unit and integration tests.
+- Record reproducible configurations.
+- Implement seed-aware dataset splitting.
+- Add validation reports.
+- Add YOLO export.
+- Add generation failure handling.
+- Add golden-image tests where practical.
 
-### Phase 2 — browser workflow
+### Phase 2: Local user experience
 
-- Add project creation and image upload.
-- Add user-friendly generation configuration.
-- Show progress and generated previews.
-- Add downloadable ZIP exports and reports.
+- Add project initialization.
+- Add a simple local UI.
+- Add progress reporting.
+- Add configuration templates.
+- Add downloadable HTML reports.
+- Add example projects.
+- Improve error messages and documentation.
 
-### Phase 3 — organization and pilot readiness
+### Phase 3: Real-world validation
 
 - Add public benchmark fixtures.
-- Add probe-model training and per-label metrics.
-- Add deletion, retention, and access controls.
-- Add private projects and team workspaces.
-- Test with individual users and two or three organizations.
+- Add optional probe-model training.
+- Compare synthetic-only, real-only, and mixed-data baselines.
+- Test with independent developers and researchers.
+- Test with one or two small organizations.
+- Measure time saved and model-performance impact.
 
-### Phase 4 — post-MVP
+### Phase 4: Hosted workflow
 
-- Diffusion-based inpainting.
-- 3D/CAD ingestion.
-- Multi-domain projects.
-- Hosted downstream model training.
-- Organization-level integrations, audit logs, and advanced collaboration.
+- Add user accounts.
+- Add private project storage.
+- Add asynchronous generation jobs.
+- Add project and artifact deletion.
+- Add retention controls.
+- Add team workspaces.
+- Add API access.
+- Add usage limits and billing experiments.
 
-## Security and privacy
+### Phase 5: Advanced generation
 
-Images may contain private personal, product, or business information. The MVP should commit to:
+- Diffusion-based local inpainting.
+- Lighting-aware deformation.
+- Domain-specific generation packs.
+- User-provided reference images.
+- 3D or CAD integration.
+- Advanced collaboration.
+- Organization-specific generation strategies.
 
-- using images only for the user’s requested generation;
-- not training shared models on user or company images without explicit opt-in;
-- allowing project and artifact deletion;
-- keeping artifacts isolated by project;
-- documenting retention behavior before hosted pilots begin.
-
-Individual users should be able to work locally where possible. Companies may require private deployment, stronger tenant isolation, audit logging, role-based access, and configurable retention before adoption.
-
-## Product and business model direction
-
-The core tool should remain available to everyone, with a useful local or free experience for individuals. Organization-focused plans can provide:
-
-- higher generation limits;
-- private hosted workspaces or self-hosted deployment;
-- team collaboration and permissions;
-- audit logs and retention policies;
-- API access and integrations;
-- priority support and custom generation strategies.
-
-The product should validate usage patterns before locking in pricing. Usage-based, project-based, and organization subscriptions can be evaluated during pilots.
+---
 
 ## Success metrics
 
-- A first-time user can go from seed images to a downloadable dataset in under one hour.
-- Individual users can run the core workflow without specialized infrastructure.
-- Generated datasets contain valid, correctly aligned labels with a low generation failure rate.
-- Synthetic-trained models perform meaningfully above baseline on real examples for at least two simple generation types.
-- At least one individual or research user and one organization evaluate the generated data in a real project.
-- Company pilots demonstrate value through faster experimentation, fewer labeling requirements, or improved model performance.
+The most important metric is not the number of images generated.
 
-The most important metric is not how realistic an image looks in isolation; it is whether generated data helps users solve real computer-vision problems.
+The most important question is whether generated data helps users solve real computer-vision problems.
+
+### Product metrics
+
+- A new user can create a downloadable dataset in under one hour.
+- A user can run the core workflow without specialized infrastructure.
+- The CLI can be installed and used without an API key.
+- Users can reproduce a previous run successfully.
+- Exported datasets work in at least two common computer-vision frameworks.
+- Users return to modify or reproduce generation configurations.
+
+### Technical metrics
+
+- Low generation failure rate.
+- Valid masks for generated images.
+- Valid bounding boxes for generated images.
+- No seed leakage between dataset splits.
+- Stable output for a fixed configuration and random seed.
+- Useful seed-image quality warnings.
+- Reasonable class and severity distributions.
+
+### Outcome metrics
+
+- Synthetic-trained models improve over a real-data-only baseline in at least one initial benchmark.
+- Mixed real and synthetic data improves recall or F1 on held-out real images.
+- At least one independent developer or researcher uses SynthLine in a real project.
+- At least one organization evaluates SynthLine against an existing data-collection workflow.
+- Users report reduced time spent collecting or labeling initial training data.
+
+---
+
+## Security and privacy
+
+Images may contain private personal, product, or business information.
+
+The local-first workflow should ensure that images remain under the user’s control.
+
+For any hosted product, SynthLine should commit to:
+
+- Using uploaded images only for the requested product functionality.
+- Not training shared models on user images without explicit opt-in.
+- Supporting project and artifact deletion.
+- Isolating artifacts between projects and tenants.
+- Clearly documenting retention behavior.
+- Protecting access to generated datasets and reports.
+- Providing appropriate controls for business and confidential data.
+
+Organization-focused deployments may eventually require:
+
+- Private networking.
+- Self-hosting.
+- Role-based access.
+- Audit logs.
+- Configurable retention.
+- Encryption at rest and in transit.
+- Workspace-level access controls.
+
+---
+
+## Limitations
+
+SynthLine cannot guarantee that synthetic images will improve a computer-vision model.
+
+Synthetic data can fail when:
+
+- The generated visual patterns are too artificial.
+- The defect appearance is incorrectly modeled.
+- Real images contain lighting or backgrounds not represented by the seed set.
+- The generated class distribution is unrealistic.
+- The model learns generator artifacts.
+- The source images are inconsistent or unrepresentative.
+- Training and evaluation data share source-image variants.
+- The defect requires 3D geometry or physical simulation.
+
+Real-world validation remains necessary.
+
+SynthLine should help users measure these limitations rather than hide them.
+
+---
 
 ## Getting started
 
-The runtime and package setup are being established during Phase 0. The recommended starting environment is Python 3.11+ with a virtual environment and a `pyproject.toml`-managed package.
+The project is currently in pre-MVP development.
 
-Once the initial pipeline is in place:
+The intended development environment is Python 3.11 or newer.
 
 ```bash
-git clone https://github.com/ThriveCodes/synthline.git
+git clone https://github.com/thrivecodes/synthline.git
 cd synthline
+
 python -m venv .venv
 source .venv/bin/activate
+
 pip install -e ".[dev]"
 pytest
 ```
 
-No external API keys should be required for the procedural generation pipeline. Any future hosted or diffusion-based provider must document its credentials and data-handling implications.
+The procedural generation pipeline should not require external API keys.
+
+Future hosted or diffusion-based features must document:
+
+- Required credentials.
+- Expected infrastructure.
+- Image-processing behavior.
+- Data retention.
+- Privacy implications.
+- Additional operating costs.
+
+---
+
+## Development principles
+
+- Keep the first vertical slice small and complete.
+- Prefer deterministic behavior over visual complexity.
+- Add tests with every generator.
+- Preserve generation configurations.
+- Treat masks as the source of truth.
+- Split source images before generating variants.
+- Measure real-world usefulness.
+- Do not introduce infrastructure before usage requires it.
+- Keep the local workflow useful without a hosted account.
+- Document known failures and limitations.
+- Include example outputs with generator changes.
+- Keep product claims narrower than the evidence supports.
+
+---
 
 ## Contributing
 
-This is an early-stage private repository. Keep changes focused on one component and add or update tests with implementation changes. Update this README when a design decision changes the architecture, scope, schema, target users, or validation methodology.
+SynthLine is an early-stage private project.
 
-Prefer branching and pull requests for normal development. Experimental generation changes should include example outputs and the configuration used to produce them.
+When contributing:
+
+1. Keep changes focused on one component.
+2. Add or update tests with implementation changes.
+3. Include configuration files for experimental generation changes.
+4. Include example outputs where visual behavior changes.
+5. Record random seeds for reproducibility.
+6. Update documentation when architecture or product behavior changes.
+7. Prefer branches and pull requests for normal development.
+8. Avoid adding infrastructure that is not required by a demonstrated use case.
+
+---
 
 ## License
 
-Private and confidential. All rights reserved. This project is not currently licensed for external use, distribution, or reproduction.
+This repository is private and confidential.
+
+All rights reserved. The project is not currently licensed for external use, distribution, or reproduction.
+
+---
 
 ## Glossary
 
-- **Anomaly detection:** learning normal appearance and flagging deviations rather than classifying known defect categories.
-- **Domain randomization:** varying non-essential visual factors such as lighting, background, and angle to improve generalization.
-- **Seed set:** the small collection of real images used as the source for generation.
-- **Sim-to-real gap:** the performance difference between training or evaluating with synthetic data and performance on real-world images.
+**Anomaly detection**  
+Learning normal appearance and identifying deviations rather than classifying only known defect categories.
+
+**Bounding box**  
+A rectangular region surrounding a labeled object or defect.
+
+**Domain randomization**  
+Varying non-essential visual factors such as lighting, texture, background, and orientation.
+
+**Generation run**  
+One reproducible execution of the generation pipeline using a specific configuration and random seed.
+
+**Seed image**  
+A real input image used as the source for one or more generated images.
+
+**Sim-to-real gap**  
+The performance difference between models trained or evaluated on synthetic data and their performance on real-world data.
+
+**Synthetic data**  
+Artificially generated data created to resemble or extend real-world data.
+
+**Validation set**  
+A group of images used to measure performance during development.
+
+**Test set**  
+A held-out group of images used for final evaluation. It should remain isolated from generation and model-tuning decisions.
+
+---
+
+## Project status
+
+SynthLine is currently focused on proving one complete workflow:
+
+```text
+Small set of normal images
+    → procedural defect generation
+    → exact masks and bounding boxes
+    → reproducible dataset export
+    → visual and automated validation
+    → measurement on real images
+```
+
+The project should expand only after this workflow demonstrates measurable value.
+````
