@@ -66,6 +66,7 @@ probe = ["scikit-learn>=1.3"]
 
 
 [project.scripts]
+synthline = "synthline_ai.cli:app"
 synthline-ai = "synthline_ai.cli:app"
 
 [tool.hatch.build.targets.wheel]
