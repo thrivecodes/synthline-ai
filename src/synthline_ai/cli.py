@@ -24,6 +24,7 @@ from synthline_ai.config.models import (
     GenerationConfig,
     SplitRatio,
 )
+from synthline_ai.export.trainers import export_training_boilerplates
 from synthline_ai.generation.pipeline import run_generation
 from synthline_ai.ingestion.loader import load_seeds
 from synthline_ai.ingestion.quality import check_seed_quality
@@ -34,6 +35,7 @@ from synthline_ai.validation.checks import (
     check_split_leakage,
     validate_results,
 )
+from synthline_ai.validation.heatmap import generate_defect_heatmap
 from synthline_ai.validation.html_preview import generate_html_preview
 from synthline_ai.validation.previews import create_contact_sheet
 from synthline_ai.validation.statistics import compute_split_statistics, compute_statistics
@@ -171,14 +173,19 @@ def generate(
     if export_fmt in (ExportFormat.VOC, ExportFormat.ALL):
         voc_path = export_voc(results, output, config)
 
-    # Step 5: Contact sheet & Interactive HTML preview
+    # Step 5: Contact sheet, Spatial Heatmap & Interactive HTML preview
     contact_path = output / "contact-sheet.jpg"
     create_contact_sheet(results, contact_path, max_samples=16)
+    heatmap_path = output / "heatmap.png"
+    _, spatial_metrics = generate_defect_heatmap(results, heatmap_path)
     html_preview_path = output / "preview.html"
     title = f"SynthLine AI — {defect.capitalize()} Dataset"
     generate_html_preview(results, html_preview_path, title=title)
 
-    # Step 6: Statistics and validation
+    # Step 6: ML Training Scaffolding (PyTorch Dataset & Ultralytics YOLO)
+    export_training_boilerplates(output, config)
+
+    # Step 7: Statistics and validation
     stats = compute_statistics(results)
     validation = validate_results(results)
     dup_check = check_output_duplicates(results)
@@ -193,6 +200,7 @@ def generate(
         "output_duplicates": dup_check,
         "brightness_distribution": brightness_check,
         "split_leakage": leakage_check,
+        "spatial_distribution": spatial_metrics,
     }
     if split_stats:
         report["split_statistics"] = split_stats
@@ -236,7 +244,13 @@ def generate(
     if isinstance(outlier_count, int) and outlier_count > 0:
         table.add_row("Brightness outliers", f"[yellow]{outlier_count}[/yellow]")
 
+    cov = spatial_metrics.get("coverage_ratio", 0.0) * 100
+    table.add_row("Surface coverage", f"{cov:.1f}%")
+    dispersion = spatial_metrics.get("spatial_entropy", 0.0)
+    table.add_row("Spatial dispersion", f"{dispersion:.2f} / 1.0")
+
     table.add_row("Contact sheet", str(contact_path))
+    table.add_row("Spatial heatmap", str(heatmap_path))
     table.add_row("HTML preview", str(html_preview_path))
     table.add_row("Report", str(report_path))
 

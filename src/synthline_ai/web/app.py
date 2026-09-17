@@ -173,6 +173,18 @@ def get_run_preview(project_id: str, run_id: str) -> FileResponse:
     return FileResponse(str(preview_file), media_type="image/jpeg")
 
 
+@app.get("/api/projects/{project_id}/runs/{run_id}/heatmap")
+def get_run_heatmap(project_id: str, run_id: str) -> FileResponse:
+    """Return the spatial defect density heatmap of a generation run."""
+    run = manager.get_run(project_id, run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run '{run_id}' not found.")
+    heatmap_file = Path(run.output_dir) / "heatmap.png"
+    if not heatmap_file.exists():
+        raise HTTPException(status_code=404, detail="Spatial heatmap not found.")
+    return FileResponse(str(heatmap_file), media_type="image/png")
+
+
 @app.get("/api/projects/{project_id}/runs/{run_id}/report")
 def get_run_report(project_id: str, run_id: str) -> FileResponse:
     """Return the validation and statistics report.json."""

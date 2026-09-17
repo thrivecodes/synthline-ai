@@ -436,7 +436,7 @@
   <header>
     <div class="brand">
       <span class="brand-title">SynthLine AI</span>
-      <span class="brand-tag">Local Studio v0.2.1</span>
+      <span class="brand-tag">Local Studio v0.2.2</span>
     </div>
     <div class="header-info">
       <span id="active-project-tag"><div class="status-dot"></div> Workspace: Active</span>
@@ -925,8 +925,8 @@
                     <div class="stat-value">${avgArea}</div>
                   </div>
                   <div class="stat-item">
-                    <div class="stat-label">Empty Masks</div>
-                    <div class="stat-value">${stats.empty_mask_count || 0}</div>
+                    <div class="stat-label">Spatial Coverage</div>
+                    <div class="stat-value">${(stats.spatial_distribution && stats.spatial_distribution.coverage_ratio !== undefined) ? (stats.spatial_distribution.coverage_ratio * 100).toFixed(1) + '%' : '100%'}</div>
                   </div>
                   <div class="stat-item">
                     <div class="stat-label">Leakage Check</div>
@@ -934,11 +934,19 @@
                   </div>
                 </div>
 
-                <div>
-                  <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 0.3rem;">Contact Sheet Sample Gallery</div>
-                  <a href="/api/projects/${p.id}/runs/${r.id}/preview" target="_blank">
-                    <img src="/api/projects/${p.id}/runs/${r.id}/preview" class="preview-img" alt="Contact Sheet" />
-                  </a>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.75rem;">
+                  <div>
+                    <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 0.3rem;">Contact Sheet Sample Gallery</div>
+                    <a href="/api/projects/${p.id}/runs/${r.id}/preview" target="_blank">
+                      <img src="/api/projects/${p.id}/runs/${r.id}/preview" class="preview-img" alt="Contact Sheet" />
+                    </a>
+                  </div>
+                  <div>
+                    <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 0.3rem;">Spatial Defect Heatmap</div>
+                    <a href="/api/projects/${p.id}/runs/${r.id}/heatmap" target="_blank">
+                      <img src="/api/projects/${p.id}/runs/${r.id}/heatmap" class="preview-img" alt="Spatial Heatmap" onerror="this.style.display='none'" />
+                    </a>
+                  </div>
                 </div>
               </div>
             `;

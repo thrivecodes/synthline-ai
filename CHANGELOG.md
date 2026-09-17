@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-09-17
+
+### Added
+- **Defect Spatial Heatmap & Dispersion Analysis (`validation/heatmap.py`)**:
+  - Accumulates defect occurrences into normalized 2D density heatmaps (`heatmap.png`) overlaid on the workpiece.
+  - Computes spatial metrics including surface coverage ratio (%), weighted defect centroid coordinates, and normalized Shannon spatial dispersion entropy (0.0 to 1.0).
+  - Integrated into CLI summary tables, validation reports, and Studio UI run inspection cards.
+- **Zero-Boilerplate ML Framework Integration (`export/trainers.py`)**:
+  - `SynthLineDataset` (`dataset_pytorch.py`): Ready-to-import PyTorch / torchvision `Dataset` and `DataLoader` supporting paired image and binary defect mask loading.
+  - Ultralytics YOLO Training Script (`train_yolo.py`): Standalone training script pre-configured with `data.yaml`, image resolution, and hyperparameter flags.
+- **Production OCI Docker Container & Compose Setup**:
+  - Minimal multi-stage `Dockerfile` based on `python:3.12-slim` with OpenCV system libraries and non-root security.
+  - Instant 1-click `docker-compose.yml` with persistent volume mappings.
+  - Automated GitHub Container Registry (`ghcr.io/thrivecodes/synthline-ai`) build and push workflow.
+
 ## [0.2.1] - 2026-09-17
 
 ### Added
