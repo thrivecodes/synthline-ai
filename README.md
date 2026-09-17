@@ -319,8 +319,8 @@ Generative inpainting should be added only after the procedural baseline proves 
 
 ```text
                     ┌─────────────────────┐
-   Seed images ─────▶│ Ingestion and QA    │
-   Config / params ─▶│ Project management  │
+   Seed images  ────▶│ Ingestion and QA   │
+   Config / params ─▶│ Project management │
                     └──────────┬──────────┘
                                ▼
                     ┌─────────────────────┐
