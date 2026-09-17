@@ -53,6 +53,10 @@ class GenerationConfig(BaseModel):
     enable_split: bool = Field(default=False)
     split_ratio: SplitRatio = Field(default_factory=SplitRatio)
     export_format: ExportFormat = ExportFormat.COCO
+    enable_variations: bool = Field(default=False)
+    lighting_intensity: float = Field(default=0.0, ge=0.0, le=1.0)
+    texture_intensity: float = Field(default=0.0, ge=0.0, le=1.0)
+    geometry_intensity: float = Field(default=0.0, ge=0.0, le=1.0)
 
 
 class ImageInfo(BaseModel):

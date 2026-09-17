@@ -55,6 +55,10 @@ def generate(
     train_ratio: float = typer.Option(0.7, min=0.0, max=1.0, help="Train split proportion"),
     val_ratio: float = typer.Option(0.2, min=0.0, max=1.0, help="Validation split proportion"),
     test_ratio: float = typer.Option(0.1, min=0.0, max=1.0, help="Test split proportion"),
+    variations: bool = typer.Option(False, help="Enable surface environmental variations"),
+    lighting: float = typer.Option(0.2, min=0.0, max=1.0, help="Lighting variation intensity"),
+    texture: float = typer.Option(0.15, min=0.0, max=1.0, help="Texture variation intensity"),
+    geometry: float = typer.Option(0.5, min=0.0, max=1.0, help="Geometric affine jitter intensity"),
 ) -> None:
     """Generate synthetic defect images from seed images."""
     start_time = time.time()
@@ -90,6 +94,10 @@ def generate(
         enable_split=split,
         split_ratio=split_config,
         export_format=export_fmt,
+        enable_variations=variations,
+        lighting_intensity=lighting if variations else 0.0,
+        texture_intensity=texture if variations else 0.0,
+        geometry_intensity=geometry if variations else 0.0,
     )
 
     # Step 1: Load seeds

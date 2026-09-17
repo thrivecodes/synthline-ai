@@ -14,6 +14,7 @@ from synthline_ai.config.defaults import (
     MIN_DIMENSION,
 )
 from synthline_ai.config.models import ImageInfo, QualityWarning, SeedSetReport
+from synthline_ai.ingestion.deduplication import check_seed_duplicates
 
 
 def check_seed_quality(images: list[ImageInfo], arrays: list[np.ndarray]) -> SeedSetReport:
@@ -106,6 +107,10 @@ def check_seed_quality(images: list[ImageInfo], arrays: list[np.ndarray]) -> See
                     severity="warning",
                 )
             )
+
+    # Check for identical and near-duplicate seeds
+    if arrays and len(arrays) == len(images):
+        warnings.extend(check_seed_duplicates(images, arrays))
 
     return SeedSetReport(
         images=images,

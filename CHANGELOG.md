@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Phase 3 Ingestion Deduplication & Surface Randomization**:
+  - `deduplication.py`: 64-bit perceptual difference hashing (`dHash`) and Hamming distance analysis detecting exact and near-duplicate seed images during ingestion QA.
+  - `randomization/lighting.py`: Directional illumination gradients, vignetting, and light falloff simulation matching factory line illumination shifts.
+  - `randomization/texture.py`: High-frequency sensor noise and low-frequency surface roughness micro-variations.
+  - `randomization/geometry.py`: Sub-pixel affine translations and micro-rotations keeping image and defect mask in strict pixel-perfect alignment.
+  - CLI options: `--variations`, `--lighting`, `--texture`, `--geometry` for generation customization.
 - **Phase 2 Local User Experience & Studio**:
   - `synthline-ai ui`: Local web studio server command launching FastAPI/Uvicorn interface.
   - Interactive Browser Studio UI: Adheres to SynthLine visual design tokens (warm editorial `#f5f4ef` palette, sans-serif typography, responsive sidebar/workspace grid).

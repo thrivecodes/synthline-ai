@@ -6,6 +6,11 @@ import numpy as np
 
 from synthline_ai.config.models import DatasetSplit, GenerationConfig, ImageInfo
 from synthline_ai.generation.base import GenerationResult
+from synthline_ai.generation.randomization import (
+    apply_geometry_variation,
+    apply_lighting_variation,
+    apply_texture_variation,
+)
 from synthline_ai.generation.registry import get_generator
 
 
@@ -64,6 +69,41 @@ def partition_seeds(
     }
 
 
+def _apply_randomization(
+    result: GenerationResult,
+    config: GenerationConfig,
+    seed: int,
+) -> GenerationResult:
+    """Apply optional surface lighting, texture, and geometry variations."""
+    if not config.enable_variations:
+        return result
+
+    rng = np.random.RandomState(seed)
+    img = result.image
+    mask = result.mask
+
+    if config.geometry_intensity > 0.0:
+        max_rot = 3.0 * config.geometry_intensity
+        max_shift = int(4 * config.geometry_intensity) or 1
+        img, mask = apply_geometry_variation(
+            img,
+            mask,
+            rng,
+            max_rotation_deg=max_rot,
+            max_shift_px=max_shift,
+        )
+
+    if config.lighting_intensity > 0.0:
+        img = apply_lighting_variation(img, rng, intensity=config.lighting_intensity)
+
+    if config.texture_intensity > 0.0:
+        img = apply_texture_variation(img, rng, intensity=config.texture_intensity)
+
+    result.image = img
+    result.mask = mask
+    return result
+
+
 def run_generation(
     config: GenerationConfig,
     images: list[np.ndarray],
@@ -91,6 +131,7 @@ def run_generation(
                 severity=config.severity,
                 frequency=config.frequency,
             )
+            result = _apply_randomization(result, config, per_image_seed)
             result.split = DatasetSplit.TRAIN.value
             results.append(result)
         return results
@@ -140,6 +181,7 @@ def run_generation(
                 severity=config.severity,
                 frequency=config.frequency,
             )
+            result = _apply_randomization(result, config, per_image_seed)
             result.split = s_name
             results.append(result)
             sample_idx += 1
