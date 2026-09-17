@@ -170,6 +170,21 @@ def train_probe(
 
     clf = GradientBoostingClassifier(n_estimators=50, random_state=random_seed)
 
+    if len(set(synthetic_labels)) < 2:
+        return {
+            "probe_error": (
+                "Synthetic data contains only 1 class; both normal and defect samples are needed."
+            ),
+            "synthetic_cv_accuracy": 1.0,
+            "real_precision": 0.0,
+            "real_recall": 0.0,
+            "real_f1": 0.0,
+            "real_accuracy": 0.0,
+            "sim_to_real_gap": 1.0,
+            "feature_importances": {},
+            "model_params": clf.get_params(),
+        }
+
     # Cross validation on synthetic data
     # Use max(2, min(5, n_samples)) for cv splits
     cv_splits = max(2, min(5, len(synthetic_labels) // 2))
@@ -177,9 +192,9 @@ def train_probe(
         cv_scores = cross_val_score(clf, X_train, y_train, cv=cv_splits)
         syn_cv_acc = float(np.mean(cv_scores))
     else:
-        # Fallback if too few samples or only one class
+        # Fallback if too few samples
         clf.fit(X_train, y_train)
-        syn_cv_acc = accuracy_score(y_train, clf.predict(X_train))
+        syn_cv_acc = float(accuracy_score(y_train, clf.predict(X_train)))
 
     # Train on full synthetic
     clf.fit(X_train, y_train)
@@ -315,3 +330,116 @@ def evaluate_dataset_quality(
             metrics["probe_error"] = "Mismatched or empty real data lists"
 
     return metrics
+
+
+def compare_synthetic_vs_real_baselines(
+    synthetic_images: list[np.ndarray],
+    synthetic_masks: list[np.ndarray],
+    synthetic_labels: list[int],
+    real_images: list[np.ndarray],
+    real_masks: list[np.ndarray],
+    real_labels: list[int],
+    test_ratio: float = 0.4,
+    random_seed: int = 42,
+) -> dict[str, object]:
+    """Compare performance across Real-only, Synthetic-only, and Combined (Real+Synthetic) models.
+
+    Evaluates each trained baseline on a held-out test split of real images.
+    Demonstrates whether synthetic visual-data generation provides tangible lift over a real-only
+    baseline with limited defect samples.
+
+    Args:
+        synthetic_images: Synthetic image arrays.
+        synthetic_masks: Synthetic binary masks.
+        synthetic_labels: Synthetic binary labels (0=good, 1=defect).
+        real_images: Real image arrays.
+        real_masks: Real binary masks.
+        real_labels: Real binary labels.
+        test_ratio: Fraction of real images reserved for held-out evaluation.
+        random_seed: Seed for reproducible dataset partitioning and probe fitting.
+
+    Returns:
+        dict containing metrics for real_only, synthetic_only, augmented, and calculated lift.
+    """
+    try:
+        from sklearn.ensemble import GradientBoostingClassifier
+        from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+        from sklearn.model_selection import train_test_split
+    except ImportError:
+        raise ImportError(
+            "scikit-learn is required for baseline comparisons. "
+            "Install with `pip install synthline-ai[probe]` or `pip install scikit-learn`"
+        ) from None
+
+    if len(real_images) < 4:
+        raise ValueError("At least 4 real images are required for held-out baseline comparison.")
+    if len(synthetic_images) == 0:
+        raise ValueError("Synthetic dataset cannot be empty.")
+
+    indices = np.arange(len(real_images))
+    unique_labels, counts = np.unique(real_labels, return_counts=True)
+    stratify = real_labels if len(unique_labels) > 1 and int(np.min(counts)) >= 2 else None
+
+    train_idx, test_idx = train_test_split(
+        indices,
+        test_size=test_ratio,
+        random_state=random_seed,
+        stratify=stratify,
+    )
+
+    real_train_imgs = [real_images[i] for i in train_idx]
+    real_train_masks = [real_masks[i] for i in train_idx]
+    real_train_y = [real_labels[i] for i in train_idx]
+
+    real_test_imgs = [real_images[i] for i in test_idx]
+    real_test_masks = [real_masks[i] for i in test_idx]
+    real_test_y = [real_labels[i] for i in test_idx]
+
+    syn_X = extract_features(synthetic_images, synthetic_masks)
+    real_train_X = extract_features(real_train_imgs, real_train_masks)
+    real_test_X = extract_features(real_test_imgs, real_test_masks)
+
+    def _eval_model(
+        X_train: np.ndarray,
+        y_train: list[int],
+        X_test: np.ndarray,
+        y_test: list[int],
+    ) -> dict[str, float]:
+        if len(np.unique(y_train)) < 2:
+            single_cls = y_train[0]
+            preds = [single_cls] * len(y_test)
+        else:
+            clf = GradientBoostingClassifier(random_state=random_seed, n_estimators=50)
+            clf.fit(X_train, y_train)
+            preds = clf.predict(X_test)
+        return {
+            "accuracy": float(accuracy_score(y_test, preds)),
+            "precision": float(precision_score(y_test, preds, zero_division=0)),
+            "recall": float(recall_score(y_test, preds, zero_division=0)),
+            "f1": float(f1_score(y_test, preds, zero_division=0)),
+            "train_samples": float(len(y_train)),
+        }
+
+    real_only = _eval_model(real_train_X, real_train_y, real_test_X, real_test_y)
+    synthetic_only = _eval_model(syn_X, synthetic_labels, real_test_X, real_test_y)
+
+    aug_X = np.vstack([real_train_X, syn_X])
+    aug_y = real_train_y + synthetic_labels
+    augmented = _eval_model(aug_X, aug_y, real_test_X, real_test_y)
+
+    f1_lift = augmented["f1"] - real_only["f1"]
+    acc_lift = augmented["accuracy"] - real_only["accuracy"]
+
+    return {
+        "real_only": real_only,
+        "synthetic_only": synthetic_only,
+        "augmented": augmented,
+        "test_samples": len(real_test_y),
+        "f1_lift": float(f1_lift),
+        "accuracy_lift": float(acc_lift),
+        "synthetic_standalone_relative_f1": float(
+            synthetic_only["f1"] / (real_only["f1"] + 1e-6)
+        ),
+        "is_beneficial": bool(f1_lift >= 0 and acc_lift >= 0),
+    }
+

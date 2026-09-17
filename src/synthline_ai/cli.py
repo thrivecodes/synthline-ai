@@ -251,12 +251,20 @@ def probe(
         None, help="Directory of real labeled images (with masks/ subdir)"
     ),
     seed: int = typer.Option(42, help="Random seed for probe model training"),
+    compare_baselines: bool = typer.Option(
+        False,
+        "--compare-baselines",
+        help="Compare Real, Synthetic, and Augmented models on held-out real data",
+    ),
 ) -> None:
     """Evaluate synthetic data quality with an optional probe-model sim-to-real test."""
     import cv2
 
     from synthline_ai.generation.base import GenerationResult
-    from synthline_ai.validation.probe_models import evaluate_dataset_quality
+    from synthline_ai.validation.probe_models import (
+        compare_synthetic_vs_real_baselines,
+        evaluate_dataset_quality,
+    )
 
     console.print(f"\n[bold]SynthLine AI[/bold] Probe Evaluation v{__version__}\n")
 
@@ -333,10 +341,144 @@ def probe(
     console.print("\n[bold green]Probe Results:[/bold green]")
     console.print(table)
 
+    # Baseline comparison if requested
+    if compare_baselines and real_images_list and len(real_images_list) >= 4:
+        syn_imgs = [r.image for r in results if r.image is not None and r.mask is not None]
+        syn_msks = [r.mask for r in results if r.image is not None and r.mask is not None]
+        syn_lbls = [1 if (m > 0).any() else 0 for m in syn_msks]
+
+        try:
+            comp = compare_synthetic_vs_real_baselines(
+                synthetic_images=syn_imgs,
+                synthetic_masks=syn_msks,
+                synthetic_labels=syn_lbls,
+                real_images=real_images_list,
+                real_masks=real_masks_list,
+                real_labels=real_labels_list,
+                random_seed=seed,
+            )
+            metrics["baseline_comparison"] = comp
+
+            comp_table = Table(
+                title="Baseline Comparison (Held-out Real Test)",
+                box=None,
+                padding=(0, 2),
+            )
+            comp_table.add_column("Model Baseline", style="bold")
+            comp_table.add_column("Accuracy")
+            comp_table.add_column("Precision")
+            comp_table.add_column("Recall")
+            comp_table.add_column("F1 Score")
+
+            r_m = comp.get("real_only")
+            s_m = comp.get("synthetic_only")
+            a_m = comp.get("augmented")
+
+            if isinstance(r_m, dict) and isinstance(s_m, dict) and isinstance(a_m, dict):
+                comp_table.add_row(
+                    "Real-Only Baseline",
+                    f"{float(r_m['accuracy']):.3f}",
+                    f"{float(r_m['precision']):.3f}",
+                    f"{float(r_m['recall']):.3f}",
+                    f"{float(r_m['f1']):.3f}",
+                )
+                comp_table.add_row(
+                    "Synthetic-Only",
+                    f"{float(s_m['accuracy']):.3f}",
+                    f"{float(s_m['precision']):.3f}",
+                    f"{float(s_m['recall']):.3f}",
+                    f"{float(s_m['f1']):.3f}",
+                )
+                comp_table.add_row(
+                    "Real + Synthetic (Augmented)",
+                    f"{float(a_m['accuracy']):.3f}",
+                    f"{float(a_m['precision']):.3f}",
+                    f"{float(a_m['recall']):.3f}",
+                    f"[bold green]{float(a_m['f1']):.3f}[/bold green]",
+                )
+                console.print("\n[bold green]Baseline Comparison Matrix:[/bold green]")
+                console.print(comp_table)
+                lift_val = comp.get("f1_lift", 0.0)
+                f1_lift = float(lift_val) if isinstance(lift_val, (int, float)) else 0.0
+                lift_str = f"+{f1_lift:.3f}" if f1_lift >= 0 else f"{f1_lift:.3f}"
+                console.print(
+                    f"Synthetic Augmentation F1 Lift: [bold green]{lift_str}[/bold green]\n"
+                )
+        except Exception as err:
+            console.print(f"[yellow]Warning: Could not compute baseline comparison: {err}[/yellow]")
+
     probe_report_path = run_dir / "probe-report.json"
     with open(probe_report_path, "w") as f:
         json.dump(metrics, f, indent=2, default=str)
     console.print(f"\n[dim]Report saved to {probe_report_path}[/dim]\n")
+
+
+@app.command()
+def benchmark(
+    count: int = typer.Option(20, min=1, max=500, help="Number of variants per defect"),
+    output: Path = typer.Option(
+        Path("./benchmark_results"), help="Directory for benchmark results"
+    ),
+    seed: int = typer.Option(42, help="Random seed for reproducibility"),
+) -> None:
+    """Run the standardized SynthLine AI benchmark suite across surfaces and defects."""
+    from synthline_ai.benchmarks.runner import run_benchmark_suite
+
+    console.print(f"\n[bold]SynthLine AI[/bold] Benchmark Suite v{__version__}\n")
+    console.print(f"Executing surface fixtures benchmark ({count} variants/defect)...")
+
+    summary = run_benchmark_suite(output, per_defect_count=count, random_seed=seed)
+
+    table = Table(title="Throughput Benchmarks", box=None, padding=(0, 2))
+    table.add_column("Defect Type", style="bold")
+    table.add_column("Generated")
+    table.add_column("Elapsed")
+    table.add_column("Throughput (img/s)", style="bold cyan")
+
+    for defect_name, data in summary.get("throughput", {}).items():
+        table.add_row(
+            defect_name.capitalize(),
+            str(int(data["count"])),
+            f"{data['elapsed_seconds']:.2f}s",
+            f"{data['images_per_second']:.1f}",
+        )
+    console.print(table)
+
+    comp = summary.get("baseline_comparison", {})
+    if comp and "real_only" in comp:
+        comp_table = Table(
+            title="\nSim-to-Real Transfer Baseline Comparison",
+            box=None,
+            padding=(0, 2),
+        )
+        comp_table.add_column("Model Baseline", style="bold")
+        comp_table.add_column("Accuracy")
+        comp_table.add_column("Precision")
+        comp_table.add_column("Recall")
+        comp_table.add_column("F1 Score")
+
+        for label, key in [
+            ("Real-Only Baseline", "real_only"),
+            ("Synthetic-Only", "synthetic_only"),
+            ("Real + Synthetic (Augmented)", "augmented"),
+        ]:
+            m = comp.get(key)
+            if isinstance(m, dict):
+                comp_table.add_row(
+                    label,
+                    f"{float(m['accuracy']):.3f}",
+                    f"{float(m['precision']):.3f}",
+                    f"{float(m['recall']):.3f}",
+                    f"{float(m['f1']):.3f}",
+                )
+        console.print(comp_table)
+        lift_val = comp.get("f1_lift", 0.0)
+        f1_lift = float(lift_val) if isinstance(lift_val, (int, float)) else 0.0
+        lift_str = f"+{f1_lift:.3f}" if f1_lift >= 0 else f"{f1_lift:.3f}"
+        console.print(f"Synthetic Augmentation F1 Lift: [bold green]{lift_str}[/bold green]\n")
+
+    report_file = output / "benchmark_report.json"
+    console.print(f"[dim]Complete benchmark report saved to {report_file}[/dim]\n")
 
 
 @app.command()

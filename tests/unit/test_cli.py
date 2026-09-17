@@ -165,3 +165,30 @@ def test_cli_ui_help() -> None:
     assert "Launch the SynthLine AI Local Studio" in clean_output
     assert "--host" in clean_output
     assert "--port" in clean_output
+
+
+def test_cli_probe_and_benchmark_help() -> None:
+    import re
+
+    res_probe = runner.invoke(app, ["probe", "--help"], color=False)
+    assert res_probe.exit_code == 0
+    clean_probe = re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", res_probe.output)
+    assert "--compare-baselines" in clean_probe
+    assert "--run-dir" in clean_probe
+
+    res_bench = runner.invoke(app, ["benchmark", "--help"], color=False)
+    assert res_bench.exit_code == 0
+    clean_bench = re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", res_bench.output)
+    assert "benchmark suite" in clean_bench
+    assert "--count" in clean_bench
+
+
+def test_cli_benchmark_execution(tmp_path: Path) -> None:
+    bench_dir = tmp_path / "bench_out"
+    result = runner.invoke(
+        app,
+        ["benchmark", "--count", "2", "--output", str(bench_dir), "--seed", "42"],
+    )
+    assert result.exit_code == 0
+    assert (bench_dir / "benchmark_report.json").exists()
+
