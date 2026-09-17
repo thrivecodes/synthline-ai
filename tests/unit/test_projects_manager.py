@@ -103,10 +103,24 @@ def test_create_run_and_retrieve(tmp_path: Path) -> None:
     # Verify generated artifacts on disk
     run_dir = Path(run.output_dir)
     assert (run_dir / "contact-sheet.jpg").exists()
+    assert (run_dir / "preview.html").exists()
     assert (run_dir / "report.json").exists()
     assert (run_dir / "run.json").exists()
     assert (run_dir / "annotations.coco.json").exists()
     assert (run_dir / "yolo" / "data.yaml").exists()
+
+    # Test get_run_image_path
+    img_path = manager.get_run_image_path(proj.id, run.id, "contact-sheet.jpg")
+    assert img_path is not None and img_path.exists()
+    assert manager.get_run_image_path(proj.id, run.id, "missing_img.jpg") is None
+
+    # Test get_seed_path and delete_seed
+    seed_path = manager.get_seed_path(proj.id, "seed_ok.png")
+    assert seed_path is not None and seed_path.exists()
+    assert manager.get_seed_path(proj.id, "nonexistent.png") is None
+
+    assert manager.delete_seed(proj.id, "seed_ok.png") is True
+    assert manager.delete_seed(proj.id, "seed_ok.png") is False
 
     # Test get_run
     fetched_run = manager.get_run(proj.id, run.id)

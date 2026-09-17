@@ -26,6 +26,7 @@ from synthline_ai.projects.models import (
     RunCreate,
 )
 from synthline_ai.validation.checks import validate_results
+from synthline_ai.validation.html_preview import generate_html_preview
 from synthline_ai.validation.previews import create_contact_sheet
 from synthline_ai.validation.statistics import compute_statistics
 
@@ -194,6 +195,11 @@ class ProjectManager:
         contact_path = run_output_dir / "contact-sheet.jpg"
         create_contact_sheet(results, contact_path, max_samples=16)
 
+        # Interactive HTML Preview
+        html_preview_path = run_output_dir / "preview.html"
+        title = f"SynthLine AI — {payload.defect_type.value.capitalize()} Dataset"
+        generate_html_preview(results, html_preview_path, title=title)
+
         # Statistics and checks
         stats = compute_statistics(results)
         validation = validate_results(results)
@@ -227,3 +233,29 @@ class ProjectManager:
         if not run_file.exists():
             return None
         return Run(**json.loads(run_file.read_text()))
+
+    def get_seed_path(self, project_id: str, filename: str) -> Path | None:
+        p_dir = self._project_dir(project_id)
+        seed_file = p_dir / "seeds" / filename
+        if seed_file.exists() and seed_file.is_file():
+            return seed_file
+        return None
+
+    def delete_seed(self, project_id: str, filename: str) -> bool:
+        seed_path = self.get_seed_path(project_id, filename)
+        if seed_path and seed_path.exists():
+            seed_path.unlink()
+            return True
+        return False
+
+    def get_run_image_path(self, project_id: str, run_id: str, filename: str) -> Path | None:
+        p_dir = self._project_dir(project_id)
+        run_dir = p_dir / "runs" / run_id
+        for subdir in ("images", "masks"):
+            target = run_dir / subdir / filename
+            if target.exists() and target.is_file():
+                return target
+        direct = run_dir / filename
+        if direct.exists() and direct.is_file():
+            return direct
+        return None

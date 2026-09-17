@@ -130,7 +130,73 @@ def test_api_runs_and_downloads(client: TestClient) -> None:
     assert res_zip.headers["content-type"] == "application/zip"
     assert len(res_zip.content) > 0
 
+    # Test GET /api/projects/{proj_id}/runs/{run_id}/html-preview
+    res_html = client.get(f"/api/projects/{proj_id}/runs/{run_id}/html-preview")
+    assert res_html.status_code == 200
+    assert "SynthLine AI" in res_html.text
+
+    # Test GET /api/projects/{proj_id}/runs/{run_id}/images/{filename}
+    res_img = client.get(f"/api/projects/{proj_id}/runs/{run_id}/images/contact-sheet.jpg")
+    assert res_img.status_code == 200
+
     # 404 tests for run endpoints
     assert client.get(f"/api/projects/{proj_id}/runs/bad_run/preview").status_code == 404
     assert client.get(f"/api/projects/{proj_id}/runs/bad_run/report").status_code == 404
     assert client.get(f"/api/projects/{proj_id}/runs/bad_run/download").status_code == 404
+    assert client.get(f"/api/projects/{proj_id}/runs/bad_run/html-preview").status_code == 404
+    assert (
+        client.get(f"/api/projects/{proj_id}/runs/{run_id}/images/nonexistent.png").status_code
+        == 404
+    )
+
+
+def test_api_seeds_endpoints(client: TestClient) -> None:
+    # Create project
+    res_create = client.post(
+        "/api/projects",
+        json={"name": "Seed API Test"},
+    )
+    assert res_create.status_code == 201
+    proj_id = res_create.json()["id"]
+
+    # List seeds when empty
+    res_empty_seeds = client.get(f"/api/projects/{proj_id}/seeds")
+    assert res_empty_seeds.status_code == 200
+    assert res_empty_seeds.json()["seeds_count"] == 0
+
+    # Upload a seed image
+    img = np.full((64, 64, 3), 120, dtype=np.uint8)
+    _, encoded = cv2.imencode(".png", img)
+    files = [("files", ("test_sample.png", encoded.tobytes(), "image/png"))]
+    res_upload = client.post(f"/api/projects/{proj_id}/seeds", files=files)
+    assert res_upload.status_code == 200
+
+    # List seeds now
+    res_seeds = client.get(f"/api/projects/{proj_id}/seeds")
+    assert res_seeds.status_code == 200
+    seeds_data = res_seeds.json()
+    assert seeds_data["seeds_count"] == 1
+    assert len(seeds_data["seeds"]) == 1
+
+    # Serve seed image
+    res_get_seed = client.get(f"/api/projects/{proj_id}/seeds/test_sample.png")
+    assert res_get_seed.status_code == 200
+    assert len(res_get_seed.content) > 0
+
+    # 404 for missing seed
+    res_missing = client.get(f"/api/projects/{proj_id}/seeds/missing.png")
+    assert res_missing.status_code == 404
+
+    # Delete seed
+    res_del = client.delete(f"/api/projects/{proj_id}/seeds/test_sample.png")
+    assert res_del.status_code == 200
+    assert res_del.json() == {"status": "deleted"}
+
+    # Second delete returns 404
+    res_del_404 = client.delete(f"/api/projects/{proj_id}/seeds/test_sample.png")
+    assert res_del_404.status_code == 404
+
+    # Project not found 404s
+    assert client.get("/api/projects/bad_proj/seeds").status_code == 404
+    assert client.get("/api/projects/bad_proj/seeds/img.png").status_code == 404
+    assert client.delete("/api/projects/bad_proj/seeds/img.png").status_code == 404

@@ -109,6 +109,36 @@ async def upload_seeds(
     }
 
 
+@app.get("/api/projects/{project_id}/seeds")
+def list_seeds(project_id: str) -> dict[str, object]:
+    """List seed images and quality warnings for a project."""
+    proj = manager.get_project(project_id)
+    if not proj:
+        raise HTTPException(status_code=404, detail=f"Project '{project_id}' not found.")
+    return {
+        "seeds_count": proj.seeds_count,
+        "seeds": [s.model_dump() for s in proj.seeds],
+        "warnings": [w.model_dump() for w in proj.seed_warnings],
+    }
+
+
+@app.get("/api/projects/{project_id}/seeds/{filename}")
+def get_seed_image(project_id: str, filename: str) -> FileResponse:
+    """Serve an uploaded seed image file."""
+    path = manager.get_seed_path(project_id, filename)
+    if not path or not path.exists():
+        raise HTTPException(status_code=404, detail=f"Seed image '{filename}' not found.")
+    return FileResponse(str(path))
+
+
+@app.delete("/api/projects/{project_id}/seeds/{filename}")
+def delete_seed_image(project_id: str, filename: str) -> dict[str, str]:
+    """Delete an individual seed image from the project."""
+    if not manager.delete_seed(project_id, filename):
+        raise HTTPException(status_code=404, detail=f"Seed image '{filename}' not found.")
+    return {"status": "deleted"}
+
+
 @app.post("/api/projects/{project_id}/runs", response_model=Run, status_code=201)
 def create_run(project_id: str, payload: RunCreate) -> Run:
     """Execute a procedural generation run on project seeds."""
@@ -178,6 +208,27 @@ def download_run_dataset(project_id: str, run_id: str) -> StreamingResponse:
         media_type="application/zip",
         headers={"Content-Disposition": f"attachment; filename=synthline-{run_id}.zip"},
     )
+
+
+@app.get("/api/projects/{project_id}/runs/{run_id}/html-preview", response_class=HTMLResponse)
+def get_run_html_preview(project_id: str, run_id: str) -> HTMLResponse:
+    """Serve the interactive HTML dataset preview gallery for a generation run."""
+    run = manager.get_run(project_id, run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run '{run_id}' not found.")
+    preview_path = Path(run.output_dir) / "preview.html"
+    if not preview_path.exists():
+        raise HTTPException(status_code=404, detail="Interactive HTML preview not found.")
+    return HTMLResponse(content=preview_path.read_text(encoding="utf-8"))
+
+
+@app.get("/api/projects/{project_id}/runs/{run_id}/images/{filename}")
+def get_run_image(project_id: str, run_id: str, filename: str) -> FileResponse:
+    """Serve a generated image or mask file from a run."""
+    path = manager.get_run_image_path(project_id, run_id, filename)
+    if not path or not path.exists():
+        raise HTTPException(status_code=404, detail=f"Image '{filename}' not found in run.")
+    return FileResponse(str(path))
 
 
 # ---------------------------------------------------------------------------
