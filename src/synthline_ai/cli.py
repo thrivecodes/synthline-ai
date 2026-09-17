@@ -28,9 +28,14 @@ from synthline_ai.generation.pipeline import run_generation
 from synthline_ai.ingestion.loader import load_seeds
 from synthline_ai.ingestion.quality import check_seed_quality
 from synthline_ai.labeling.export import export_coco, export_yolo
-from synthline_ai.validation.checks import validate_results
+from synthline_ai.validation.checks import (
+    check_brightness_distribution,
+    check_output_duplicates,
+    check_split_leakage,
+    validate_results,
+)
 from synthline_ai.validation.previews import create_contact_sheet
-from synthline_ai.validation.statistics import compute_statistics
+from synthline_ai.validation.statistics import compute_split_statistics, compute_statistics
 
 app = typer.Typer(
     name="synthline-ai",
@@ -152,12 +157,21 @@ def generate(
     # Step 6: Statistics and validation
     stats = compute_statistics(results)
     validation = validate_results(results)
+    dup_check = check_output_duplicates(results)
+    brightness_check = check_brightness_distribution(results)
+    leakage_check = check_split_leakage(results)
+    split_stats = compute_split_statistics(results) if split else {}
 
     # Write report
-    report = {
+    report: dict[str, object] = {
         "statistics": stats,
         "validation": validation,
+        "output_duplicates": dup_check,
+        "brightness_distribution": brightness_check,
+        "split_leakage": leakage_check,
     }
+    if split_stats:
+        report["split_statistics"] = split_stats
     report_path = output / "report.json"
     with open(report_path, "w") as f:
         json.dump(report, f, indent=2, default=str)
@@ -182,6 +196,17 @@ def generate(
         table.add_row("COCO annotations", str(coco_path))
     if yolo_path:
         table.add_row("YOLO data.yaml", str(yolo_path))
+
+    dup_pairs = dup_check.get("duplicate_pairs", 0)
+    if isinstance(dup_pairs, int) and dup_pairs > 0:
+        table.add_row("Output duplicates", f"[yellow]{dup_pairs} pair(s)[/yellow]")
+
+    if leakage_check.get("has_leakage"):
+        table.add_row("Split leakage", "[red]DETECTED[/red]")
+
+    outlier_count = brightness_check.get("outlier_count", 0)
+    if isinstance(outlier_count, int) and outlier_count > 0:
+        table.add_row("Brightness outliers", f"[yellow]{outlier_count}[/yellow]")
 
     table.add_row("Contact sheet", str(contact_path))
     table.add_row("Report", str(report_path))
@@ -212,6 +237,101 @@ def ui(
     console.print(f"\n[bold]SynthLine AI[/bold] Studio v{__version__}")
     console.print(f"Starting server at [link=http://{host}:{port}]http://{host}:{port}[/link]\n")
     uvicorn.run("synthline_ai.web.app:app", host=host, port=port, reload=reload)
+
+
+@app.command()
+def probe(
+    run_dir: Path = typer.Option(..., help="Path to a completed generation run directory"),
+    real_dir: Path = typer.Option(
+        None, help="Directory of real labeled images (with masks/ subdir)"
+    ),
+    seed: int = typer.Option(42, help="Random seed for probe model training"),
+) -> None:
+    """Evaluate synthetic data quality with an optional probe-model sim-to-real test."""
+    import cv2
+
+    from synthline_ai.generation.base import GenerationResult
+    from synthline_ai.validation.probe_models import evaluate_dataset_quality
+
+    console.print(f"\n[bold]SynthLine AI[/bold] Probe Evaluation v{__version__}\n")
+
+    # Load generated images and masks
+    images_dir = run_dir / "images"
+    masks_dir = run_dir / "masks"
+    if not images_dir.exists() or not masks_dir.exists():
+        console.print("[red]Error:[/red] Run directory must contain images/ and masks/ subdirs.")
+        raise typer.Exit(code=1)
+
+    results: list[GenerationResult] = []
+    for img_path in sorted(images_dir.iterdir()):
+        mask_path = masks_dir / img_path.name
+        img = cv2.imread(str(img_path))
+        mask = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE) if mask_path.exists() else None
+        if img is not None and mask is not None:
+            results.append(GenerationResult(image=img, mask=mask))
+
+    console.print(f"Loaded [bold]{len(results)}[/bold] synthetic image-mask pairs")
+
+    # Load real data if provided
+    real_images_list = None
+    real_masks_list = None
+    real_labels_list = None
+    if real_dir and real_dir.exists():
+        real_images_list = []
+        real_masks_list = []
+        real_labels_list = []
+        real_masks_path = real_dir / "masks"
+        for img_path in sorted(real_dir.iterdir()):
+            if img_path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".bmp", ".tiff"}:
+                continue
+            img = cv2.imread(str(img_path))
+            if img is None:
+                continue
+            real_mask_path: Path | None = (
+                real_masks_path / img_path.name if real_masks_path.exists() else None
+            )
+            if real_mask_path is not None and real_mask_path.exists():
+                mask = cv2.imread(str(real_mask_path), cv2.IMREAD_GRAYSCALE)
+                if mask is not None:
+                    real_images_list.append(img)
+                    real_masks_list.append(mask)
+                    label = 1 if mask.max() > 0 else 0
+                    real_labels_list.append(label)
+        console.print(f"Loaded [bold]{len(real_images_list)}[/bold] real image-mask pairs")
+
+    metrics = evaluate_dataset_quality(
+        results,
+        real_images=real_images_list,
+        real_masks=real_masks_list,
+        real_labels=real_labels_list,
+        random_seed=seed,
+    )
+
+    table = Table(show_header=False, box=None, padding=(0, 2))
+    table.add_column("Metric", style="bold")
+    table.add_column("Value")
+
+    table.add_row("Feature diversity", f"{metrics.get('feature_diversity', 0.0):.4f}")
+    table.add_row("Intra-class variance", f"{metrics.get('intra_class_variance', 0.0):.4f}")
+
+    if "synthetic_cv_accuracy" in metrics:
+        table.add_row("Synthetic CV accuracy", f"{metrics['synthetic_cv_accuracy']:.3f}")
+        table.add_row("Real accuracy", f"{metrics['real_accuracy']:.3f}")
+        table.add_row("Real F1", f"{metrics['real_f1']:.3f}")
+        gap = metrics.get("sim_to_real_gap", 0.0)
+        gap_color = "green" if isinstance(gap, float) and abs(gap) < 0.1 else "yellow"
+        table.add_row("Sim-to-real gap", f"[{gap_color}]{gap:.3f}[/{gap_color}]")
+
+    if "probe_error" in metrics:
+        table.add_row("Probe status", f"[yellow]{metrics['probe_error']}[/yellow]")
+
+    console.print("\n[bold green]Probe Results:[/bold green]")
+    console.print(table)
+
+    probe_report_path = run_dir / "probe-report.json"
+    with open(probe_report_path, "w") as f:
+        json.dump(metrics, f, indent=2, default=str)
+    console.print(f"\n[dim]Report saved to {probe_report_path}[/dim]\n")
 
 
 if __name__ == "__main__":

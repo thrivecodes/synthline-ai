@@ -8,7 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Phase 3 Ingestion Deduplication & Surface Randomization**:
+- **Phase 4 Validation & Proof, Probe Models & Defect Variability**:
+  - `validation/probe_models.py`: 16-feature computer vision extraction pipeline, lightweight gradient boosting probe classifier measuring sim-to-real performance gap against real held-out inspection samples, and dataset feature diversity/variance scoring.
+  - `generation/procedural/variability.py`: `apply_defect_variability` applying per-defect HSV color shifts, opacity jitter, and morphological boundary roughness.
+  - Enhanced Quality Checks & Statistics in `validation/checks.py` & `validation/statistics.py`:
+    - Output image duplicate and near-duplicate detection via 64-bit dHash perceptual hashing.
+    - Distribution analysis for image brightness and contrast with statistical outlier identification (>2σ).
+    - Data partition leakage verification ensuring zero cross-split seed contamination.
+    - Per-split summary metrics and partition balance verification (`compute_split_statistics`).
+  - CLI `synthline-ai probe`: Command for evaluating generated dataset directories against real labeled reference images.
   - `deduplication.py`: 64-bit perceptual difference hashing (`dHash`) and Hamming distance analysis detecting exact and near-duplicate seed images during ingestion QA.
   - `randomization/lighting.py`: Directional illumination gradients, vignetting, and light falloff simulation matching factory line illumination shifts.
   - `randomization/texture.py`: High-frequency sensor noise and low-frequency surface roughness micro-variations.

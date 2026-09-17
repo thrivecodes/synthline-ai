@@ -6,6 +6,7 @@ import numpy as np
 
 from synthline_ai.config.models import DatasetSplit, GenerationConfig, ImageInfo
 from synthline_ai.generation.base import GenerationResult
+from synthline_ai.generation.procedural.variability import apply_defect_variability
 from synthline_ai.generation.randomization import (
     apply_geometry_variation,
     apply_lighting_variation,
@@ -74,13 +75,16 @@ def _apply_randomization(
     config: GenerationConfig,
     seed: int,
 ) -> GenerationResult:
-    """Apply optional surface lighting, texture, and geometry variations."""
+    """Apply optional defect variability and surface environmental variations."""
     if not config.enable_variations:
         return result
 
     rng = np.random.RandomState(seed)
     img = result.image
     mask = result.mask
+
+    # Defect appearance variability (color, opacity, edge roughness)
+    img, mask = apply_defect_variability(img, mask, rng)
 
     if config.geometry_intensity > 0.0:
         max_rot = 3.0 * config.geometry_intensity
